@@ -1,5 +1,7 @@
 ===ZapperOS=By=Omar Emad Eldin===
 
+This has only been tried on Ubuntu 14, other systems may need some tweaking or may not work.
+
 *Preferred build arguments:
 	i386-elf-gcc -c test.c (or) i386-elf-g++ -c test.cpp -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti
 	i386-elf-ld -o test -Ttext 0x0 -e main test.o
@@ -52,5 +54,3 @@
 	../gcc-4.6.3/configure --prefix=$PREFIX --target=$TARGET --disable-nls --without-headers --with-mpfr-include=$HOME/src/gcc-4.6.3/mpfr/src/ --with-mpfr-lib=$HOME/src/build-gcc/mpfr/src/.libs/ --with-languages=c,c++
 	make all-gcc
 	sudo make install-gcc
-	
-*Note: if you have an error in a header file called tree.h just remove the line with error.
