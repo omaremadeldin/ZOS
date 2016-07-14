@@ -14,9 +14,6 @@ This has only been tried on Ubuntu 14, other systems may need some tweaking or m
 *Required tools to debug ZapperOS:
 	- BOCHS(recommended)/QEMU
 
-*Optional tools:
-	- cloc (for counting code lines & comment lines)
-
 *Required tools to build i386-elf toolchain:
 	- gcc-4.8			installed
 	- gcc-core-4.6.3 	source
