@@ -29,7 +29,7 @@ qemu:	$(OUT)
 	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -curses
 	
 qemu-gui:	$(OUT)
-	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -curses
+	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M
 
 libc:
 	cd $(LIBC) && \
