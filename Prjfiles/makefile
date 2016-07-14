@@ -21,8 +21,12 @@ all: libc bootloader kernel
 
 all-run: all run
 
+bochs:	$(OUT)
 run:	$(OUT)
 	bochs -q -f $(BXRC)
+	
+qemu:	$(OUT)
+	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -curses
 
 libc:
 	cd $(LIBC) && \
