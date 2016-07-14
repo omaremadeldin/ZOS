@@ -264,7 +264,7 @@ void HAL::init()
 		debug("--Name:%s, System ID:0x%x\r\n", l->value->Name, l->value->systemID);
 		l = l->nextNode;
 	}
-
+	
 	VMGR::mountAll();
 	debug("%i volume(s) mounted.\r\n", VOLUMES.length);
 	LinkedList<VMGR::Volume*>::Node* m = VOLUMES.head;
@@ -275,7 +275,8 @@ void HAL::init()
 	}
 	
 	VMGR::File* x = new VMGR::File();
-	VOLUMES.head->value->fileSystem->getFileEntry(VOLUMES.head->value, "Folder 3/Folder 5/Folder 6/Test260.txt", x);
+	if (VOLUMES.head != NULL)
+		VOLUMES.head->value->fileSystem->getFileEntry(VOLUMES.head->value, "Folder 3/Folder 5/Folder 6/Test260.txt", x);
 
 	debug("Initializations Finished.\r\n");
 }
