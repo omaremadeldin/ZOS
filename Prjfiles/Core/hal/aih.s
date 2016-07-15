@@ -20,33 +20,33 @@ EXTERN ihPIT
 EXTERN ihKYBRD
 EXTERN ihIDE
 
-; GLOBAL aihErrDivideByZero
-; GLOBAL aihErrSingleStepDebug
-; GLOBAL aihErrNMIPin
-; GLOBAL aihErrBreakpointDebug
-; GLOBAL aihErrOverflow
-; GLOBAL aihErrBoundsRange
-; GLOBAL aihErrUndefinedOPCode
-; GLOBAL aihErrDoubleFault
-; GLOBAL aihErrInvalidTSS
-; GLOBAL aihErrSegmentNotPresent
-; GLOBAL aihErrStackSegOverun
-; GLOBAL aihErrGeneralProtectionFault
-; GLOBAL aihErrPageFault
+GLOBAL aihErrDivideByZero
+GLOBAL aihErrSingleStepDebug
+GLOBAL aihErrNMIPin
+GLOBAL aihErrBreakpointDebug
+GLOBAL aihErrOverflow
+GLOBAL aihErrBoundsRange
+GLOBAL aihErrUndefinedOPCode
+GLOBAL aihErrDoubleFault
+GLOBAL aihErrInvalidTSS
+GLOBAL aihErrSegmentNotPresent
+GLOBAL aihErrStackSegOverun
+GLOBAL aihErrGeneralProtectionFault
+GLOBAL aihErrPageFault
 
-; EXTERN ihErrDivideByZero
-; EXTERN ihErrSingleStepDebug
-; EXTERN ihErrNMIPin
-; EXTERN ihErrBreakpointDebug
-; EXTERN ihErrOverflow
-; EXTERN ihErrBoundsRange
-; EXTERN ihErrUndefinedOPCode
-; EXTERN ihErrDoubleFault
-; EXTERN ihErrInvalidTSS
-; EXTERN ihErrSegmentNotPresent
-; EXTERN ihErrStackSegOverun
-; EXTERN ihErrGeneralProtectionFault
-; EXTERN ihErrPageFault
+EXTERN ihErrDivideByZero
+EXTERN ihErrSingleStepDebug
+EXTERN ihErrNMIPin
+EXTERN ihErrBreakpointDebug
+EXTERN ihErrOverflow
+EXTERN ihErrBoundsRange
+EXTERN ihErrUndefinedOPCode
+EXTERN ihErrDoubleFault
+EXTERN ihErrInvalidTSS
+EXTERN ihErrSegmentNotPresent
+EXTERN ihErrStackSegOverun
+EXTERN ihErrGeneralProtectionFault
+EXTERN ihErrPageFault
 
 SECTION .text
 
@@ -93,65 +93,65 @@ aihIDE:
 ;;;;;;Exception Handlers;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; aihErrDivideByZero:
-	; call ihErrDivideByZero
-	; hlt
+aihErrDivideByZero:
+	call ihErrDivideByZero
+	hlt
 	
-; aihErrSingleStepDebug:
-	; call ihErrSingleStepDebug
-	; hlt
+aihErrSingleStepDebug:
+	call ihErrSingleStepDebug
+	hlt
 
-; aihErrNMIPin:
-	; call ihErrNMIPin
-	; hlt
+aihErrNMIPin:
+	call ihErrNMIPin
+	hlt
 
-; aihErrBreakpointDebug:
-	; call ihErrBreakpointDebug
-	; hlt
+aihErrBreakpointDebug:
+	call ihErrBreakpointDebug
+	hlt
 
-; aihErrOverflow:
-	; call ihErrOverflow
-	; hlt
+aihErrOverflow:
+	call ihErrOverflow
+	hlt
 
-; aihErrBoundsRange:
-	; call ihErrBoundsRange
-	; hlt
+aihErrBoundsRange:
+	call ihErrBoundsRange
+	hlt
 
-; aihErrUndefinedOPCode:
-	; call ihErrUndefinedOPCode
-	; hlt
+aihErrUndefinedOPCode:
+	call ihErrUndefinedOPCode
+	hlt
 
-; aihErrDoubleFault:
-	; call ihErrDoubleFault
-	; hlt
+aihErrDoubleFault:
+	call ihErrDoubleFault
+	hlt
 
-; aihErrInvalidTSS:
-	; call ihErrInvalidTSS
-	; hlt
+aihErrInvalidTSS:
+	call ihErrInvalidTSS
+	hlt
 
-; aihErrSegmentNotPresent:
-	; call ihErrSegmentNotPresent
-	; hlt
+aihErrSegmentNotPresent:
+	call ihErrSegmentNotPresent
+	hlt
 
-; aihErrStackSegOverun:
-	; call ihErrStackSegOverun
-	; hlt
+aihErrStackSegOverun:
+	call ihErrStackSegOverun
+	hlt
 
-; aihErrGeneralProtectionFault:
-	; call ihErrGeneralProtectionFault
-	; hlt
+aihErrGeneralProtectionFault:
+	call ihErrGeneralProtectionFault
+	hlt
 
-; aihErrPageFault:
-	; pop ebx		;Page Fault Error Code
-	; pop ebx		;EIP
+aihErrPageFault:
+	pop ebx		;Page Fault Error Code
+	pop ebx		;EIP
 	
-	; push ebx
+	push ebx
 
-	; mov eax,cr2
-	; push eax
+	mov eax,cr2
+	push eax
 	
-	; call ihErrPageFault
+	call ihErrPageFault
 	
-	; add esp,0x08
+	add esp,0x08
 	
-	; hlt
+	hlt

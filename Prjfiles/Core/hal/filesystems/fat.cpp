@@ -36,12 +36,8 @@ uint32_t FAT::readFATEntry(VMGR::Volume* volume, uint32_t cluster)
 	ThisFATSecNum = volume->fsVariables[FAT_VAR_BPB_RESVDSECCNT] + (FATOffset / IDE_ATA_BYTESPERSECTOR);
 	ThisFATEntOffset = (FATOffset % IDE_ATA_BYTESPERSECTOR);
 
-	HAL::debug("++1\n");
-
 	uint8_t* buffer = new uint8_t[IDE_ATA_BYTESPERSECTOR];
 	((PMGR::Partition*)(volume->Target))->readData(ThisFATSecNum, IDE_ATA_BYTESPERSECTOR, buffer);
-
-	HAL::debug("++2\n");
 
 	if (FATType == 12)
 	{
@@ -114,9 +110,9 @@ void FAT::init(VMGR::Volume* volume)
 	uint8_t* buffer = new uint8_t[IDE_ATA_BYTESPERSECTOR];
 	((PMGR::Partition*)volume->Target)->readData(0, 1, buffer);
 
-	FATCommonBPB* commonBPB = ((FATCommonBPB*)((uint32_t)&buffer + FAT_COMMON_BPB_OFFSET));
-	FAT1216BPB* fat1216BPB = ((FAT1216BPB*)((uint32_t)&buffer + FAT_FAT1216_BPB_OFFSET));
-	FAT32BPB* fat32BPB = ((FAT32BPB*)((uint32_t)&buffer + FAT_FAT32_BPB_OFFSET));
+	FATCommonBPB* commonBPB = ((FATCommonBPB*)((uint32_t)buffer + FAT_COMMON_BPB_OFFSET));
+	FAT1216BPB* fat1216BPB = ((FAT1216BPB*)((uint32_t)buffer + FAT_FAT1216_BPB_OFFSET));
+	FAT32BPB* fat32BPB = ((FAT32BPB*)((uint32_t)buffer + FAT_FAT32_BPB_OFFSET));
 
 	if (commonBPB->BPB_BytsPerSec != IDE_ATA_BYTESPERSECTOR) //No support for non-512 sector sizes
 	{

@@ -20,6 +20,7 @@
 
 #include "gdt.h"
 #include "idt.h"
+#include "exceptions.h"
 #include "pic.h"
 #include "pit.h"
 #include "kybrd.h"
@@ -169,7 +170,9 @@ void HAL::init()
 	IDT::init();
 	debug("IDT setup complete.\r\n");
 	
-	//TODO:Exceptions
+	//Install exception handlers
+	Exceptions::init();
+	debug("Exception handlers installed.\r\n");
 	
 	//Programmable Interrupt Controller	
 	PIC::init();
