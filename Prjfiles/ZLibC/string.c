@@ -186,3 +186,20 @@ void strtoupper(char* s)
 	for (size_t i = 0; i < len; i++)
 		s[i] = toupper(s[i]);
 }
+
+void strreverse(char* s)
+{
+	if (s == NULL)
+		return;
+	
+	size_t len = strlen(s);
+	size_t i = 0;
+	size_t j = len - 1;
+
+	for (i = 0; i < len / 2; i++, j--)
+	{
+        char tmp = s[i];
+        s[i] = s[j];
+        s[j] = tmp;
+    }
+}

@@ -36,8 +36,12 @@ uint32_t FAT::readFATEntry(VMGR::Volume* volume, uint32_t cluster)
 	ThisFATSecNum = volume->fsVariables[FAT_VAR_BPB_RESVDSECCNT] + (FATOffset / IDE_ATA_BYTESPERSECTOR);
 	ThisFATEntOffset = (FATOffset % IDE_ATA_BYTESPERSECTOR);
 
-	uint8_t buffer[IDE_ATA_BYTESPERSECTOR];
+	HAL::debug("++1\n");
+
+	uint8_t* buffer = new uint8_t[IDE_ATA_BYTESPERSECTOR];
 	((PMGR::Partition*)(volume->Target))->readData(ThisFATSecNum, IDE_ATA_BYTESPERSECTOR, buffer);
+
+	HAL::debug("++2\n");
 
 	if (FATType == 12)
 	{
@@ -52,6 +56,8 @@ uint32_t FAT::readFATEntry(VMGR::Volume* volume, uint32_t cluster)
 		FATEntryVal = *((uint16_t*)&buffer[ThisFATEntOffset]);
 	else if (FATType == 32)
 		FATEntryVal = (*((uint32_t*)&buffer[ThisFATEntOffset])) & 0x0FFFFFFF;
+
+	delete [] buffer;
 
 	return FATEntryVal;
 }
@@ -72,7 +78,7 @@ void FAT::writeFATEntry(VMGR::Volume* volume, uint32_t cluster, uint32_t entry)
 	ThisFATSecNum = volume->fsVariables[FAT_VAR_BPB_RESVDSECCNT] + (FATOffset / IDE_ATA_BYTESPERSECTOR);
 	ThisFATEntOffset = (FATOffset % IDE_ATA_BYTESPERSECTOR);
 	
-	uint8_t buffer[IDE_ATA_BYTESPERSECTOR];
+	uint8_t* buffer = new uint8_t[IDE_ATA_BYTESPERSECTOR];
 	((PMGR::Partition*)(volume->Target))->readData(ThisFATSecNum, IDE_ATA_BYTESPERSECTOR, buffer);
 
 	if (FATType == 12)
@@ -90,6 +96,8 @@ void FAT::writeFATEntry(VMGR::Volume* volume, uint32_t cluster, uint32_t entry)
 		(*((uint32_t*)&buffer[ThisFATEntOffset])) = (entry & 0x0FFFFFFF);
 	
 	((PMGR::Partition*)(volume->Target))->writeData(ThisFATSecNum, 1, buffer);
+
+	delete [] buffer;
 }
 
 FAT::FAT()
@@ -103,7 +111,7 @@ void FAT::init(VMGR::Volume* volume)
 	if (volume == NULL)
 		return;
 
-	uint8_t buffer[IDE_ATA_BYTESPERSECTOR];
+	uint8_t* buffer = new uint8_t[IDE_ATA_BYTESPERSECTOR];
 	((PMGR::Partition*)volume->Target)->readData(0, 1, buffer);
 
 	FATCommonBPB* commonBPB = ((FATCommonBPB*)((uint32_t)&buffer + FAT_COMMON_BPB_OFFSET));
@@ -111,7 +119,9 @@ void FAT::init(VMGR::Volume* volume)
 	FAT32BPB* fat32BPB = ((FAT32BPB*)((uint32_t)&buffer + FAT_FAT32_BPB_OFFSET));
 
 	if (commonBPB->BPB_BytsPerSec != IDE_ATA_BYTESPERSECTOR) //No support for non-512 sector sizes
+	{
 		return;
+	}
 
 	uint16_t RootDirSectors = (((commonBPB->BPB_RootEntCnt * 32) + (IDE_ATA_BYTESPERSECTOR - 1)) / IDE_ATA_BYTESPERSECTOR);
 	uint32_t FATSz, TotSec, DataSec, CountofClusters;
@@ -193,7 +203,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 	strcpy(path, filePath);
 	strtolower(path);
 
-	//*//uint32_t currentCluster = (FATType == 32 ? volume->fsVariables[FAT_VAR_BPB_ROOTCLUS] : 0);
+	uint32_t currentCluster = (FATType == 32 ? volume->fsVariables[FAT_VAR_BPB_ROOTCLUS] : 0);
 
 	bool rootDirectory = (FATType == 32 ? false : true);
 	bool Found = true;
@@ -204,11 +214,17 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 	{
 		Found = false;
 
+		static char longFileName[255];
+		static uint8_t lfnIndex = 0;
+		longFileName[0] = '\0';
+
 		uint16_t clusterCount = 1;
-		uint16_t entryCount = 1;
+		uint16_t entryCount = 1;		
 
 		while ((entryCount * sizeof(FATEntry)) < (clusterCount * IDE_ATA_BYTESPERSECTOR * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]))
 		{
+			HAL::debug("EntryCount:%i\n", entryCount);
+
 			if ((entry->DIR_Name[0] == 0xE5) || (entry->DIR_Name[0] == 0x00)) //Indicates entry is free
 			{
 				entry++;
@@ -222,22 +238,56 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 					entry->DIR_Attr.ATTR_VOLUME_ID)
 				{
 					//Long File Name Entry
+					uint8_t* longFileEntry = ((uint8_t*)entry);
+
+					//If this is the first entry in long file name chain then clear the string
+					if ((longFileEntry[0] & 0x40) == 0x40)
+						lfnIndex = 0;
+					
+					//Enumerate characters backwards
+					
+					//2 Characters
+					for (int8_t i = 30; i >= 28; i-= 2)
+						if ((longFileEntry[i] != 0xFF) && (longFileEntry[i] != 0x00))
+							longFileName[lfnIndex++] = (char)longFileEntry[i];
+
+					//6 Characters
+					for (int8_t i = 24; i >= 14; i-= 2)
+						if ((longFileEntry[i] != 0xFF) && (longFileEntry[i] != 0x00))
+							longFileName[lfnIndex++] = (char)longFileEntry[i];
+
+					//5 Characters
+					for (int8_t i = 9; i >= 1; i-= 2)
+						if ((longFileEntry[i] != 0xFF) && (longFileEntry[i] != 0x00))
+							longFileName[lfnIndex++] = (char)longFileEntry[i];
+
+					longFileName[lfnIndex] = '\0';
+					
+					entry++;
+					entryCount++;
 				}
 				else
 				{
-					char fileName[9];
-					strncpy(fileName, ((char*)(entry->DIR_Name)), 8);
-					fileName[8] = '\0';
-					strtrim(fileName);
-					strtolower(fileName);
+					if (longFileName[0] != '\0')
+					{
+						strreverse(longFileName);
+					}
+					else
+					{
+						char fileName[9];
+						strncpy(fileName, ((char*)(entry->DIR_Name)), 8);
+						fileName[8] = '\0';
+						strtrim(fileName);
+						strtolower(fileName);
 
-					char extension[4];
-					strncpy(extension, ((char*)(entry->DIR_Name) + 8), 3);
-					extension[3] = '\0';
-					strtrim(extension);
-					strtolower(extension);
+						char extension[4];
+						strncpy(extension, ((char*)(entry->DIR_Name) + 8), 3);
+						extension[3] = '\0';
+						strtrim(extension);
+						strtolower(extension);
 
-					HAL::debug("'%s'.'%s'\n", fileName, extension);
+						HAL::debug("'%s'.'%s'\n", fileName, extension);
+					}
 
 					entry++;
 					entryCount++;
@@ -246,7 +296,29 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 
 			if (!rootDirectory)
 			{
+				if (entryCount * sizeof(FATEntry) == (clusterCount * IDE_ATA_BYTESPERSECTOR * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]))
+				{		
+					HAL::debug("**1\n");
 
+					currentCluster = readFATEntry(volume, currentCluster);
+
+					HAL::debug("**2\n");
+
+					if (currentCluster >= (FATType == 32 ? FAT_FAT32_EOF : (FATType == 16 ? FAT_FAT16_EOF : FAT_FAT12_EOF)))
+					{
+						HAL::debug("**3\n");
+						Found = false;
+						break;
+					}
+					else
+					{
+						HAL::debug("**4\n");
+						uint32_t firstSectorOfCluster = (FirstDataSector + ((currentCluster - 2) * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]));
+						((PMGR::Partition*)(volume->Target))->readData(firstSectorOfCluster, volume->fsVariables[FAT_VAR_BPB_SECPERCLUS], buffer);
+						entry = ((FATEntry*)buffer);
+						clusterCount++;
+					}
+				}
 			}
 		}
 

@@ -43,6 +43,7 @@ size_t strlen(const char* s);
 size_t strtrim(char* s);
 void strtolower(char* s);
 void strtoupper(char* s);
+void strreverse(char* s);
 
 #ifdef __cplusplus
 	}
