@@ -77,11 +77,12 @@ namespace zos
 			IOModes ioMode;
 
 		public:
-			//File();
-			//File(const string& path, IOModes mode);
-			//bool open(const string& path, IOModes mode);
+			File();
+			bool open(const char* path, IOModes mode);
+			File(const char* path, IOModes mode);
 			//bool read();
 			//bool readAll();
+			~File();
 		};
 
 		class Directory

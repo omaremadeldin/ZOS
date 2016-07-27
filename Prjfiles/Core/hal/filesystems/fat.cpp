@@ -15,6 +15,8 @@
 #include "../hal.h"
 #include "../ide.h"
 
+#include "../misc/macros.h"
+
 #include <string.h>
 	
 using namespace zos;
@@ -197,7 +199,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 
 	char* path = new char[strlen(filePath) + 1];	//Seperate copy of the path to convert it to lowercase & tokenize with strtok
 	strcpy(path, filePath);
-	strtolower(path);
+	//strtolower(path);
 
 	uint32_t currentCluster = (FATType == 32 ? volume->fsVariables[FAT_VAR_BPB_ROOTCLUS] : 0);
 
@@ -210,6 +212,8 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 	{
 		Found = false;
 
+		HAL::debug("Searching For: '%s'\n", currentFileName);
+
 		static char longFileName[255];
 		static uint8_t lfnIndex = 0;
 		longFileName[0] = '\0';
@@ -219,8 +223,6 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 
 		while ((entryCount * sizeof(FATEntry)) < (clusterCount * IDE_ATA_BYTESPERSECTOR * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]))
 		{
-			HAL::debug("EntryCount:%i\n", entryCount);
-
 			if ((entry->DIR_Name[0] == 0xE5) || (entry->DIR_Name[0] == 0x00)) //Indicates entry is free
 			{
 				entry++;
@@ -228,7 +230,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 			}
 			else
 			{
-				if (entry->DIR_Attr.ATTR_READ_ONLY 	&&
+				if (entry->DIR_Attr.ATTR_READ_ONLY	&&
 					entry->DIR_Attr.ATTR_HIDDEN 	&&
 					entry->DIR_Attr.ATTR_SYSTEM		&&
 					entry->DIR_Attr.ATTR_VOLUME_ID)
@@ -264,25 +266,104 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 				}
 				else
 				{
+					char* fileName;
+
 					if (longFileName[0] != '\0')
 					{
 						strreverse(longFileName);
+						fileName = longFileName;
 					}
 					else
 					{
-						char fileName[9];
-						strncpy(fileName, ((char*)(entry->DIR_Name)), 8);
-						fileName[8] = '\0';
-						strtrim(fileName);
-						strtolower(fileName);
+						static char shortFileName[13];
+
+						char fileNameWithoutExt[9];
+						strncpy(fileNameWithoutExt, ((char*)(entry->DIR_Name)), 8);
+						fileNameWithoutExt[8] = '\0';
+						strtrim(fileNameWithoutExt);	
+						uint8_t lengthWithoutExt = strlen(fileNameWithoutExt);
 
 						char extension[4];
 						strncpy(extension, ((char*)(entry->DIR_Name) + 8), 3);
 						extension[3] = '\0';
-						strtrim(extension);
-						strtolower(extension);
+						strtrim(extension);		
+						uint8_t extensionLength = strlen(extension);
 
-						HAL::debug("'%s'.'%s'\n", fileName, extension);
+						strcpy(shortFileName, fileNameWithoutExt);
+						if (extensionLength > 0)
+						{
+							shortFileName[lengthWithoutExt] = '.';
+							strcpy(shortFileName + lengthWithoutExt + 1, extension);
+							shortFileName[lengthWithoutExt + extensionLength + 1] = '\0';
+						}
+						else
+						{
+							shortFileName[lengthWithoutExt] = '\0';
+						}
+
+						
+						fileName = shortFileName;
+					}
+
+					HAL::debug("'%s'", fileName);
+
+					if (strcmp(currentFileName, fileName) == 0)
+					{
+						Found = true;
+						HAL::debug("**");
+					}
+					HAL::debug("\n");
+
+					if (Found)
+					{
+						if (!entry->DIR_Attr.ATTR_DIRECTORY	&&
+							!entry->DIR_Attr.ATTR_VOLUME_ID)
+						{
+							//This is a file entry					
+							if (strtok(NULL, "/") == NULL)
+							{
+								//File FOUND
+								dstFile->Name = new char[strlen(fileName) + 1];
+								strcpy(dstFile->Name, fileName);
+								dstFile->Name[strlen(fileName)] = '\0';
+
+								dstFile->Path = new char[strlen(filePath) + 1];
+								strcpy(dstFile->Path, filePath);
+								dstFile->Path[strlen(filePath)] = '\0';
+
+								dstFile->firstCluster = MAKE_DWORD(entry->DIR_FstClusLO, entry->DIR_FstClusHI);
+								dstFile->fileSize = entry->DIR_FileSize;
+								dstFile->ioMode = VMGR::File::IOModes::ReadOnly;
+
+								delete [] buffer;				
+								return true;
+							}
+							else
+							{
+								//ERROR: Invalid path (This isn't the last component in the path)
+								delete [] buffer;
+								return false;
+							}
+						}
+						else if (	entry->DIR_Attr.ATTR_DIRECTORY	&&
+									!entry->DIR_Attr.ATTR_VOLUME_ID)
+						{
+							//This is a directory entry
+							currentCluster = MAKE_DWORD(entry->DIR_FstClusLO, entry->DIR_FstClusHI);
+							uint32_t firstSectorOfCluster = (FirstDataSector + ((currentCluster - 2)* volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]));
+							((PMGR::Partition*)(volume->Target))->readData(firstSectorOfCluster, volume->fsVariables[FAT_VAR_BPB_SECPERCLUS], buffer);
+							entry = ((FATEntry*)buffer);
+							
+							rootDirectory = false;
+							break;
+						}
+						else
+						{
+							//This is an invalid entry
+							//ERROR: Invalid entry
+							delete [] buffer;
+							return false;
+						}
 					}
 
 					entry++;
@@ -293,22 +374,16 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 			if (!rootDirectory)
 			{
 				if (entryCount * sizeof(FATEntry) == (clusterCount * IDE_ATA_BYTESPERSECTOR * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]))
-				{		
-					HAL::debug("**1\n");
-					
+				{					
 					currentCluster = readFATEntry(volume, currentCluster);
-
-					HAL::debug("**2\n");
 
 					if (currentCluster >= (FATType == 32 ? FAT_FAT32_EOF : (FATType == 16 ? FAT_FAT16_EOF : FAT_FAT12_EOF)))
 					{
-						HAL::debug("**3\n");
 						Found = false;
 						break;
 					}
 					else
 					{
-						HAL::debug("**4\n");
 						uint32_t firstSectorOfCluster = (FirstDataSector + ((currentCluster - 2) * volume->fsVariables[FAT_VAR_BPB_SECPERCLUS]));
 						((PMGR::Partition*)(volume->Target))->readData(firstSectorOfCluster, volume->fsVariables[FAT_VAR_BPB_SECPERCLUS], buffer);
 						entry = ((FATEntry*)buffer);
@@ -323,7 +398,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 
 	delete [] buffer;
 
-	return true;
+	return false;
 }
 
 // bool FAT::read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead)

@@ -31,6 +31,50 @@ VMGR::Volume::Volume(uint8_t id, Filesystem* fs, bool physical, void* target)
 	this->Target = target;
 }
 
+VMGR::File::File()
+{
+	Name = NULL;
+	Path = NULL;
+	parentVolume = NULL;
+	firstCluster = 0;
+	fileSize = 0;
+	isOpen = false;
+	ioMode = IOModes::ReadOnly;
+}
+
+bool VMGR::File::open(const char* path, IOModes mode)
+{
+	if (path == NULL)
+		return false;
+
+	if (mode == IOModes::ReadWrite)
+		return false;
+
+	return false;
+}
+
+VMGR::File::File(const char* path, IOModes mode)
+{
+	Name = NULL;
+	Path = NULL;
+	parentVolume = NULL;
+	firstCluster = 0;
+	fileSize = 0;
+	isOpen = false;
+	ioMode = IOModes::ReadOnly;
+	
+	open(path, mode);
+}
+
+VMGR::File::~File()
+{
+	if (Name != NULL)
+		delete [] Name;
+
+	if (Path != NULL)
+		delete []  Path;
+}
+
 uint8_t VMGR::generateVolumeID()
 {
 	static uint8_t volID = 0;
