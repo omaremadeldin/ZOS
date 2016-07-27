@@ -10,6 +10,10 @@
 
 #include "filesystems/fat.h"
 
+#include "hal.h"
+
+#include <string.h>
+
 using namespace zos;
 
 LinkedList<VMGR::Filesystem*> zos::FILESYSTEMS;
@@ -44,13 +48,45 @@ VMGR::File::File()
 
 bool VMGR::File::open(const char* path, IOModes mode)
 {
-	if (path == NULL)
-		return false;
-
 	if (mode == IOModes::ReadWrite)
 		return false;
 
-	return false;
+	isOpen = false;
+
+	char* strPath = new char[strlen(path) + 1];
+	strcpy(strPath, path);
+
+	uint32_t volumeID = atoi(strtok(strPath, ":"));
+
+	LinkedList<Volume*>::Node* i = VOLUMES.head;
+	while (i != NULL)
+	{
+		if (i->value->ID == volumeID)
+		{
+			if (i->value->Online)
+			{
+				parentVolume = i->value;
+				break;
+			}
+		}
+
+		i = i->nextNode;
+	}
+
+	if ((parentVolume == NULL) || 
+		(!parentVolume->fileSystem->getFileEntry(parentVolume, strtok(NULL, ":"), this)))
+	{
+		delete [] strPath;
+		return false;
+	}
+
+	Path = new char[strlen(path) + 1];
+	strcpy(Path, path);
+	isOpen = true;
+
+	delete [] strPath;
+
+	return true;
 }
 
 VMGR::File::File(const char* path, IOModes mode)
@@ -62,7 +98,7 @@ VMGR::File::File(const char* path, IOModes mode)
 	fileSize = 0;
 	isOpen = false;
 	ioMode = IOModes::ReadOnly;
-	
+
 	open(path, mode);
 }
 

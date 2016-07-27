@@ -273,20 +273,17 @@ void HAL::init()
 	LinkedList<VMGR::Volume*>::Node* m = VOLUMES.head;
 	while (m != NULL)
 	{
-		debug("--Name:'%s', Online:%s\r\n", m->value->Name, (m->value->Online ? "Yes":"No"));
+		debug("--Name:'%s', Online:%s, ID:%i\r\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID);
 		m = m->nextNode;
 	}
 	
-	VMGR::File* x = new VMGR::File();
-	if (VOLUMES.head != NULL)
+	VMGR::File* x = new VMGR::File("1:/Folder 3/Folder 5/Folder 6/Test260.txt", VMGR::File::IOModes::ReadOnly);
+	if ((x != NULL) && (x->isOpen))
 	{
-		if (VOLUMES.head->value->fileSystem->getFileEntry(VOLUMES.head->value, "Folder 3/Folder 5/Folder 6/Test260.txt", x))
-		{
-			debug("==Name: '%s'\r\n", x->Name);
-			debug("==Path: '%s'\r\n", x->Path);
-			debug("==First Cluster: 0x%x\r\n", x->firstCluster);
-			debug("==File Size: %i\r\n", x->fileSize);
-		}		
+		debug("==Name:'%s'\r\n", x->Name);
+		debug("==Path:'%s'\r\n", x->Path);
+		debug("==First Cluster:0x%x\r\n", x->firstCluster);
+		debug("==File Size:%i\r\n", x->fileSize);	
 	}
 
 	debug("Initializations Finished.\r\n");

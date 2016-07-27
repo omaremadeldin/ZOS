@@ -212,8 +212,6 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 	{
 		Found = false;
 
-		HAL::debug("Searching For: '%s'\n", currentFileName);
-
 		static char longFileName[255];
 		static uint8_t lfnIndex = 0;
 		longFileName[0] = '\0';
@@ -305,14 +303,8 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 						fileName = shortFileName;
 					}
 
-					HAL::debug("'%s'", fileName);
-
 					if (strcmp(currentFileName, fileName) == 0)
-					{
 						Found = true;
-						HAL::debug("**");
-					}
-					HAL::debug("\n");
 
 					if (Found)
 					{
@@ -327,20 +319,18 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 								strcpy(dstFile->Name, fileName);
 								dstFile->Name[strlen(fileName)] = '\0';
 
-								dstFile->Path = new char[strlen(filePath) + 1];
-								strcpy(dstFile->Path, filePath);
-								dstFile->Path[strlen(filePath)] = '\0';
-
 								dstFile->firstCluster = MAKE_DWORD(entry->DIR_FstClusLO, entry->DIR_FstClusHI);
 								dstFile->fileSize = entry->DIR_FileSize;
 								dstFile->ioMode = VMGR::File::IOModes::ReadOnly;
 
+								delete [] path;
 								delete [] buffer;				
 								return true;
 							}
 							else
 							{
 								//ERROR: Invalid path (This isn't the last component in the path)
+								delete [] path;
 								delete [] buffer;
 								return false;
 							}
@@ -361,6 +351,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 						{
 							//This is an invalid entry
 							//ERROR: Invalid entry
+							delete [] path;
 							delete [] buffer;
 							return false;
 						}
@@ -396,6 +387,7 @@ bool FAT::getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* d
 		currentFileName = strtok(NULL, "/");
 	}
 
+	delete [] path;
 	delete [] buffer;
 
 	return false;
