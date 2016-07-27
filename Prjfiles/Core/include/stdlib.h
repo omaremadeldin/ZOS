@@ -23,7 +23,7 @@
 //String conversion
 
 //double atof(const char* str);
-//int atoi(const char* str);
+int atoi(const char* str);
 //long int atol(const char* str);
 //double strtod(const char* str, char** endptr);
 //long int strtol (const char* str, char** endptr, int base);

@@ -11,13 +11,14 @@ CFLAGS = -c -std=c99 -O0 -ffreestanding -fpic -nostdlib -Wall -Wextra -Wno-packe
 
 AR = i386-elf-ar
 
-SRCS = string.c ctype.c
+SRCS = string.c ctype.c stdlib.c
 OBJS = $(SRCS:.c=.o)
 OUT = zlibc.a
 
 all:	$(OBJS)
 	$(AR) rc $(OUT) $(OBJS)
 
+stdlib.o:	stdlib.c
 ctype.o:	ctype.c
 string.o:	string.c
 $(OBJS):
