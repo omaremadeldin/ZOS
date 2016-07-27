@@ -94,6 +94,13 @@ char* strtok(char* str, const char* delimeters)
 
 			if (result[i] == delimeters[j])
 			{
+				if (i == 0)
+				{
+					i++;
+					result++;
+					continue;
+				}
+
 				result[i] = '\0';
 
 				if (i > srcLength)
