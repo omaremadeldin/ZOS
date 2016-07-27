@@ -82,10 +82,16 @@ char* strtok(char* str, const char* delimeters)
 	if (srcLength == 0 || delLength == 0)
 		return result;
 
-	for (int i = 0; i < srcLength; i++)
+	for (int i = 0; i <= srcLength; i++)
 	{
 		for (int j = 0; j < delLength; j++)
 		{
+			if (result[i] == '\0')
+			{
+				lastStrTok = NULL;
+				return result;
+			}
+
 			if (result[i] == delimeters[j])
 			{
 				result[i] = '\0';
