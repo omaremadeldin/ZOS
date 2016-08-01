@@ -37,8 +37,8 @@ namespace zos
 
 		public:
 			virtual void init(Volume* volume) = 0;
-			virtual bool getFileEntry(Volume* volume, const char* filePath, File* dstFile) = 0;
-			//virtual bool read(File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead) = 0;
+			virtual bool find(Volume* volume, const char* filePath, File* dstFile) = 0;
+			virtual bool read(File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead) = 0;
 		};
 
 		class Volume
@@ -80,8 +80,8 @@ namespace zos
 			File();
 			bool open(const char* path, IOModes mode);
 			File(const char* path, IOModes mode);
-			//bool read();
-			//bool readAll();
+			bool read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
+			bool readAll(uint8_t* buffer, uint64_t bufferSize, uint64_t& bytesRead);
 			~File();
 		};
 

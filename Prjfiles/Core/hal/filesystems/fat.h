@@ -122,12 +122,13 @@ namespace zos
 		private:
 			uint32_t readFATEntry(VMGR::Volume* volume, uint32_t cluster);
 			void writeFATEntry(VMGR::Volume* volume, uint32_t cluster, uint32_t entry);
+			const char* getFAT32VolumeLabel(VMGR::Volume* volume);
 
 		public:
 			FAT();
 			void init(VMGR::Volume* volume);
-			bool getFileEntry(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile);
-			//bool read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
+			bool find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile);
+			bool read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
 		};
 	}
 }

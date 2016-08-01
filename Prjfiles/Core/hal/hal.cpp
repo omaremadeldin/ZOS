@@ -283,7 +283,14 @@ void HAL::init()
 		debug("==Name:'%s'\r\n", x->Name);
 		debug("==Path:'%s'\r\n", x->Path);
 		debug("==First Cluster:0x%x\r\n", x->firstCluster);
-		debug("==File Size:%i\r\n", x->fileSize);	
+		debug("==File Size:%i\r\n", x->fileSize);
+
+		uint8_t* buffer = new uint8_t[1024];
+		uint64_t bytesRead = 0;
+		x->read(buffer, 1024, 6, 5, bytesRead);
+		debug("==--bytesRead:%i\n", bytesRead);
+		buffer[bytesRead] = '\0';
+		debug("'%s'\n", buffer);
 	}
 
 	debug("Initializations Finished.\r\n");

@@ -10,8 +10,6 @@
 
 #include "filesystems/fat.h"
 
-#include "hal.h"
-
 #include <string.h>
 
 using namespace zos;
@@ -74,7 +72,7 @@ bool VMGR::File::open(const char* path, IOModes mode)
 	}
 
 	if ((parentVolume == NULL) || 
-		(!parentVolume->fileSystem->getFileEntry(parentVolume, strtok(NULL, ":"), this)))
+		(!parentVolume->fileSystem->find(parentVolume, strtok(NULL, ":"), this)))
 	{
 		delete [] strPath;
 		return false;
@@ -100,6 +98,16 @@ VMGR::File::File(const char* path, IOModes mode)
 	ioMode = IOModes::ReadOnly;
 
 	open(path, mode);
+}
+
+bool VMGR::File::read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead)
+{
+	return parentVolume->fileSystem->read(this, buffer, bufferSize, offset, bytesToRead, bytesRead);
+}
+
+bool VMGR::File::readAll(uint8_t* buffer, uint64_t bufferSize, uint64_t& bytesRead)
+{
+	return parentVolume->fileSystem->read(this, buffer, bufferSize, 0, 0, bytesRead);
 }
 
 VMGR::File::~File()
