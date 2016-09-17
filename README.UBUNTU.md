@@ -1,6 +1,8 @@
 ===ZapperOS=By=Omar Emad Eldin===
 
-This has only been tried on Ubuntu 14, other systems may need some tweaking or may not work.
+This has only been tried on Ubuntu 14, other versions of the system may need some tweaking or may not work.
+The toolchain versions used were: 	binutils-2.22
+									gcc-5.0.2
 
 *Preferred build arguments:
 	i386-elf-gcc -c test.c (or) i386-elf-g++ -c test.cpp -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti
@@ -31,7 +33,6 @@ This has only been tried on Ubuntu 14, other systems may need some tweaking or m
 	export LD=/usr/local/bin/gcc-4.8
 	export PREFIX=/usr/local/cross
 	export TARGET=i386-elf
-	export MAKEFLAGS="-j 16"
 	mkdir -p ~/src/build-{binutils,gcc}/
 	curl ftp://ftp.gnu.org/gnu/binutils/binutils-2.22.tar.bz2 | tar -jx -f - -C ~/src/
 	curl ftp://ftp.gnu.org/gnu/gcc/gcc-4.6.3/gcc-core-4.6.3.tar.bz2 | tar -jx -f - -C ~/src/
@@ -44,6 +45,7 @@ This has only been tried on Ubuntu 14, other systems may need some tweaking or m
 	make all
 	sudo make install
 	export PATH=$PATH:$PREFIX/bin
+	echo 'export PATH=$PATH:'"$PREFIX"'/bin' >> ~/.bash_profile
 	cd ~/src/build-gcc/
 	mv ../gcc-4.6.3/gmp-5.0.2/ ../gcc-4.6.3/gmp/
 	mv ../gcc-4.6.3/mpfr-3.1.0/ ../gcc-4.6.3/mpfr/
