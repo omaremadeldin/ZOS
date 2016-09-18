@@ -583,7 +583,7 @@ bool FAT::read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t 
 	uint32_t currentCluster = file->firstCluster;
 	uint16_t clusterCount = 1;
 
-	while (((clusterCount * clusterSize) < offset) && (currentCluster < EOF))
+	while (((uint64_t)(clusterCount * clusterSize) < offset) && (currentCluster < EOF))
 	{
 		currentCluster = readFATEntry(file->parentVolume, currentCluster);
 		clusterCount++;
@@ -591,7 +591,7 @@ bool FAT::read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t 
 
 	uint8_t* tempBuffer = new uint8_t[clusterSize];
 
-	while (((clusterCount * clusterSize) >= (offset + bytesToRead)) && (currentCluster < EOF))
+	while (((uint64_t)(clusterCount * clusterSize) >= (offset + bytesToRead)) && (currentCluster < EOF))
 	{
 		uint32_t firstSectorOfCluster = (FirstDataSector + ((currentCluster - 2) * file->parentVolume->fsVariables[FAT_VAR_BPB_SECPERCLUS]));
 		((PMGR::Partition*)(file->parentVolume->Target))->readData(firstSectorOfCluster, file->parentVolume->fsVariables[FAT_VAR_BPB_SECPERCLUS], tempBuffer);

@@ -8,6 +8,8 @@
 
 #include "stdlib.h"
 
+#include "ctype.h"
+
 //String conversion
 
 int atoi(const char* str)
