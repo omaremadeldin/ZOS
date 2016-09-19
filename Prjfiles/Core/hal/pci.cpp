@@ -64,20 +64,20 @@ PCI::Device::Class PCI::Device::Classes::BridgeDevice = { 0x06, "Bridge Device",
 
 PCI::Device::Class PCI::Device::Classes::SimpleCommController = { 0x07, "Simple Communication Controllers", NULL, NULL };
 
-PCI::Device::Class PCI::Device::Classes::BaseSystemPeripheral = { 0x08, "BaseSystemPeripheral", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::BaseSystemPeripheral = { 0x08, "Base System Peripheral", NULL, NULL };
 
-PCI::Device::Class PCI::Device::Classes::InputDevice = { 0x09, "InputDevice", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::InputDevice = { 0x09, "Input Device", NULL, NULL };
 	PCI::Device::Class PCI::Device::Subclasses::KeyboardController = { 0x00, "Keyboard Controller", &PCI::Device::Classes::InputDevice , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::Digitizer = { 0x01, "Digitizer", &PCI::Device::Classes::InputDevice , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::MouseController = { 0x02, "Mouse Controller", &PCI::Device::Classes::InputDevice , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::ScannerController = { 0x03, "Scanner Controller", &PCI::Device::Classes::InputDevice , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::GameportController = { 0x04, "Gameport Controller", &PCI::Device::Classes::InputDevice , NULL };	
 
-PCI::Device::Class PCI::Device::Classes::DockingStation = { 0x0A, "DockingStation", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::DockingStation = { 0x0A, "Docking Station", NULL, NULL };
 
 PCI::Device::Class PCI::Device::Classes::Processor = { 0x0B, "Processor", NULL, NULL };
 
-PCI::Device::Class PCI::Device::Classes::SerialBusController = { 0x0C, "SerialBusController", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::SerialBusController = { 0x0C, "Serial Bus Controller", NULL, NULL };
 	PCI::Device::Class PCI::Device::Subclasses::FireWire = { 0x00, "FireWire", &PCI::Device::Classes::SerialBusController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::AccessBus = { 0x01, "Access Bus", &PCI::Device::Classes::SerialBusController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::SSA = { 0x02, "SSA", &PCI::Device::Classes::SerialBusController , NULL };
@@ -87,7 +87,7 @@ PCI::Device::Class PCI::Device::Classes::SerialBusController = { 0x0C, "SerialBu
 	PCI::Device::Class PCI::Device::Subclasses::InfiniBand = { 0x06, "InfiniBand", &PCI::Device::Classes::SerialBusController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::CANBus = { 0x09, "CAN Bus", &PCI::Device::Classes::SerialBusController , NULL };
 
-PCI::Device::Class PCI::Device::Classes::WirelessController = { 0x0D, "WirelessController", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::WirelessController = { 0x0D, "Wireless Controller", NULL, NULL };
 	PCI::Device::Class PCI::Device::Subclasses::IrDACompatibleController = { 0x00, "IrDA-Compatible Controller", &PCI::Device::Classes::WirelessController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::IRController = { 0x01, "IR Controller", &PCI::Device::Classes::WirelessController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::RFController = { 0x10, "RF Controller", &PCI::Device::Classes::WirelessController , NULL };
@@ -96,7 +96,7 @@ PCI::Device::Class PCI::Device::Classes::WirelessController = { 0x0D, "WirelessC
 	PCI::Device::Class PCI::Device::Subclasses::EthernetController80211a = { 0x20, "Ethernet Controller 802.11a", &PCI::Device::Classes::WirelessController , NULL };
 	PCI::Device::Class PCI::Device::Subclasses::EthernetController80211b = { 0x21, "Ethernet Controller 802.11b", &PCI::Device::Classes::WirelessController , NULL };
 
-PCI::Device::Class PCI::Device::Classes::IntelligentIOController = { 0x0E, "IntelligentIOController", NULL, NULL };
+PCI::Device::Class PCI::Device::Classes::IntelligentIOController = { 0x0E, "Intelligent IO Controller", NULL, NULL };
 
 PCI::Device::Class PCI::Device::Classes::SatelliteCommController = { 0x0F, "Satellite Communication Controllers", NULL, NULL };
 
