@@ -11,6 +11,7 @@
 
 #include "heap.h"
 
+#include "exceptions.h"
 #include "vmm.h"
 
 #include <string.h>
@@ -89,9 +90,8 @@ void Heap::updateSize(bool increase)
 	{
 		if (VMM::alloc(HEAP_BASEADDRESS + (pages++ * VMM_PAGE_SIZE)) == NULL)
 		{
+			Exceptions::throwException("Heap Exception", "Heap::updateSize()[1]: Cannot increase the heap base address");
 			return;
-			//TODO:Exceptions
-			//throwSoftwareFault("HEAP: Cannot increase the heap base address");
 		}
 		
 		maxBlocks += (VMM_PAGE_SIZE / HEAP_BLOCK_SIZE);
@@ -101,9 +101,8 @@ void Heap::updateSize(bool increase)
 		{
 			if (VMM::alloc(HEAP_BITMAP + ((pages / HEAP_BLOCKS_PER_BYTE) * VMM_PAGE_SIZE)) == NULL)
 			{
+				Exceptions::throwException("Heap Exception", "Heap::updateSize()[2]: Cannot increase the heap bitmap");
 				return;
-				//TODO:Exceptions
-				//throwSoftwareFault("HEAP: Cannot increase the heap bitmap");
 			}
 			
 			memset((void*)(HEAP_BITMAP + ((pages / HEAP_BLOCKS_PER_BYTE) * VMM_PAGE_SIZE)), 0, VMM_PAGE_SIZE / HEAP_BLOCKS_PER_BYTE);
@@ -180,16 +179,14 @@ void Heap::init()
 	
 	if (VMM::alloc(HEAP_BITMAP) == NULL)
 	{
+		Exceptions::throwException("Heap Exception", "Heap::init()[1]: Cannot map the heap bitmap");
 		return;
-		//TODO:Exceptions
-		//throwSoftwareFault("HEAP: Cannot map the heap bitmap");
 	}
 	
 	if (VMM::alloc(HEAP_BASEADDRESS + (pages++ * VMM_PAGE_SIZE)) == NULL)
 	{
+		Exceptions::throwException("Heap Exception", "Heap::init()[2]: Cannot map the heap base address");
 		return;
-		//TODO:Exceptions
-		//throwSoftwareFault("HEAP: Cannot map the heap base address");
 	}
 	
 	uint32_t maxBlks = (pages * VMM_PAGE_SIZE) / HEAP_BLOCK_SIZE;

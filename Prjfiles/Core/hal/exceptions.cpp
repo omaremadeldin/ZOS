@@ -179,7 +179,7 @@ void zos::ihErrPageFault(VirtualAddress requestedAddress, VirtualAddress current
 	Video::printf("  -At Address: 0x%x", currentAddress);
 }
 
-void zos::Exceptions::init()
+void Exceptions::init()
 {
 	IDT::installHandler((void*)&aihErrDivideByZero, 0x00);
 	IDT::installHandler((void*)&aihErrSingleStepDebug, 0x01);
@@ -194,4 +194,14 @@ void zos::Exceptions::init()
 	IDT::installHandler((void*)&aihErrStackSegOverun, 0x0C);
 	IDT::installHandler((void*)&aihErrGeneralProtectionFault, 0x0D);
 	IDT::installHandler((void*)&aihErrPageFault, 0x0E);
+}
+
+void Exceptions::throwException(const char* title, const char* details)
+{
+	Video::clearScreen();
+	
+	Video::printf("**EXCEPTION**%s*\n", title);
+	Video::print(details);
+
+	HAL::halt();
 }

@@ -39,5 +39,6 @@ namespace zos
 
 	public:
 		static void init();
+		static void throwException(const char* title, const char* details);
 	};
 }
