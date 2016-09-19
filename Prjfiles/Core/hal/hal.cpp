@@ -36,6 +36,7 @@
 #include "vmodes/vmode7.h"
 
 #include "utils/format.h"
+#include "utils/path.h"
 
 #include <string.h>
 
@@ -164,73 +165,73 @@ void HAL::init()
 {
 	//Global Descriptor Table
 	GDT::init();
-	debug("GDT setup complete.\r\n");
+	debug("GDT setup complete.\n");
 	
 	//Interrupt Descriptor Table
 	IDT::init();
-	debug("IDT setup complete.\r\n");
+	debug("IDT setup complete.\n");
 	
 	//Install exception handlers
 	Exceptions::init();
-	debug("Exception handlers installed.\r\n");
+	debug("Exception handlers installed.\n");
 	
 	//Programmable Interrupt Controller	
 	PIC::init();
-	debug("PIC initialized.\r\n");
+	debug("PIC initialized.\n");
 	
 	//Programmable Interval Timer
 	PIT::init();
-	debug("PIT initialized.\r\n");
+	debug("PIT initialized.\n");
 	
 	enableInterrupts();
-	debug("Interrupts enabled.\r\n");
+	debug("Interrupts enabled.\n");
 	
 	//Keyboard
 	KYBRD::init();
-	debug("Keyboard initialized.\r\n");
+	debug("Keyboard initialized.\n");
 	
 	//Get memory size passed from bootloader
 	memorySize = MAKE_DWORD(BOOT_INFO->mem_lower, BOOT_INFO->mem_upper) * 1024;
 	
 	//Physical Memory Manager
 	PMM::init();
-	debug("Physical Memory Manager initialized.\r\n");
+	debug("Physical Memory Manager initialized.\n");
 	
 	//Virtual Memory Manager
 	VMM::init();
-	debug("Virtual Memory Manager initialized.\r\n");
+	debug("Virtual Memory Manager initialized.\n");
 	
 	//Heap
 	Heap::init();
-	debug("Heap initialized.\r\n");
+	debug("Heap initialized.\n");
 	
 	//Constructors Initializing
-	debug("Calling Global Constructors...\r\n");
+	debug("Calling Global Constructors...\n");
 	ctorsInit();
 	
-	debug("Selecting & Initializing Video Mode...\r\n");
+	debug("Selecting & Initializing Video Mode...\n");
 	Video::selectVideoMode(new vmodes::VMode7);
 	Video::clearScreen();
 	
-	debug("%i MBs of memory detected, %i MBs free to use.\r\n", \
+	debug("%i MBs of memory detected, %i MBs free to use.\n", \
 		memorySize/1024/1024, (PMM::getFreeBlocks() * PMM_BLOCK_SIZE)/1024/1024);
-	debug("Kernel size is %i KBs.\r\n", KERNEL_SIZE/1024);
+	debug("Kernel size is %i KBs.\n", KERNEL_SIZE/1024);
 	
 	//Scanning PCI Bus for devices
 	debug("Scanning PCI Bus for devices... ");
 	PCI::scan();
-	debug("%i device(s) detected.\r\n", PCI_DEVICES.length);
+	debug("%i device(s) detected.\n", PCI_DEVICES.length);
 	
 	LinkedList<PCI::Device*>::Node* n = PCI_DEVICES.head;
 	while (n != NULL)
 	{
-		debug("--Bus:0x%x, Device:0x%x, Function:0x%x, Class:%s, Subclass:%s\r\n", n->value->bus, n->value->device, n->value->function, n->value->deviceClass->name, n->value->deviceSubclass->name);
+		debug("--Bus:0x%x, Device:0x%x, Function:0x%x, Class:%s, Subclass:%s\n", n->value->bus, n->value->device, n->value->function, n->value->deviceClass->name, n->value->deviceSubclass->name);
 		n = n->nextNode;
 	}
 	
 	debug("Detecting IDE devices... ");
 	IDE::scan();
-	debug("%i device(s) detected.\r\n", IDE_DEVICES.length);
+	debug("%i device(s) detected.\n", IDE_DEVICES.length);
 	
 	LinkedList<IDE::Controller::Channel::Device*>::Node* k = IDE_DEVICES.head;
 	while (k != NULL)
@@ -238,52 +239,52 @@ void HAL::init()
 		if (k->value->deviceType == IDE::Controller::Channel::Device::ATA)
 		{
 			uint64_t diskSize = (k->value->maxLBA / (1024 * 1024 / IDE_ATA_BYTESPERSECTOR));
-			debug("--Type:ATA, Model:'%s', Size:%iMBs\r\n", k->value->Model, diskSize);
+			debug("--Type:ATA, Model:'%s', Size:%iMBs\n", k->value->Model, diskSize);
 		}
 		else
 		{
-			debug("--Type:ATAPI, Model:'%s'\r\n", k->value->Model);
+			debug("--Type:ATAPI, Model:'%s'\n", k->value->Model);
 		}
 		
 		k = k->nextNode;
 	}
 	
 	PMGR::scan();
-	debug("%i partition(s) detected.\r\n", PARTITIONS.length);
+	debug("%i partition(s) detected.\n", PARTITIONS.length);
 	
 	LinkedList<PMGR::Partition*>::Node* j = PARTITIONS.head;
 	while (j != NULL)
 	{
-		debug("--Bootable:%s, System ID:0x%x\r\n", (j->value->Bootable ? "Yes":"No"), j->value->systemID);
+		debug("--Bootable:%s, System ID:0x%x\n", (j->value->Bootable ? "Yes":"No"), j->value->systemID);
 		j = j->nextNode;
 	}
 
 	VMGR::init();
-	debug("%i filesystem(s) detected.\r\n", FILESYSTEMS.length);
+	debug("%i filesystem(s) detected.\n", FILESYSTEMS.length);
 
 	LinkedList<VMGR::Filesystem*>::Node* l = FILESYSTEMS.head;
 	while (l != NULL)
 	{
-		debug("--Name:%s, System ID:0x%x\r\n", l->value->Name, l->value->systemID);
+		debug("--Name:%s, System ID:0x%x\n", l->value->Name, l->value->systemID);
 		l = l->nextNode;
 	}
 	
 	VMGR::mountAll();
-	debug("%i volume(s) mounted.\r\n", VOLUMES.length);
+	debug("%i volume(s) mounted.\n", VOLUMES.length);
 	LinkedList<VMGR::Volume*>::Node* m = VOLUMES.head;
 	while (m != NULL)
 	{
-		debug("--Name:'%s', Online:%s, ID:%i\r\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID);
+		debug("--Name:'%s', Online:%s, ID:%i\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID);
 		m = m->nextNode;
 	}
 	
-	VMGR::File* x = new VMGR::File("1:/Folder 3/Folder 5/Folder 6/Test260.txt", VMGR::File::IOModes::ReadOnly);
+	VMGR::File* x = new VMGR::File(new Path("/1/Folder 3/Folder 5/Folder 6/Test260.txt"), VMGR::File::IOModes::ReadOnly);
 	if ((x != NULL) && (x->isOpen))
 	{
-		debug("==Name:'%s'\r\n", x->Name);
-		debug("==Path:'%s'\r\n", x->Path);
-		debug("==First Cluster:0x%x\r\n", x->firstCluster);
-		debug("==File Size:%i\r\n", x->fileSize);
+		debug("==Name:'%s'\n", x->Name);
+		debug("==Path:'%s'\n", x->filePath->toString());
+		debug("==First Cluster:0x%x\n", x->firstCluster);
+		debug("==File Size:%i\n", x->fileSize);
 
 		uint8_t* buffer = new uint8_t[1024];
 		uint64_t bytesRead = 0;
@@ -291,7 +292,8 @@ void HAL::init()
 		debug("==--bytesRead:%i\n", bytesRead);
 		buffer[bytesRead] = '\0';
 		debug("'%s'\n", buffer);
+		delete [] buffer;
 	}
 
-	debug("Initializations Finished.\r\n");
+	debug("Initializations Finished.\n");
 }

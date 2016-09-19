@@ -36,7 +36,7 @@ VMGR::Volume::Volume(uint8_t id, Filesystem* fs, bool physical, void* target)
 VMGR::File::File()
 {
 	Name = NULL;
-	Path = NULL;
+	filePath = NULL;
 	parentVolume = NULL;
 	firstCluster = 0;
 	fileSize = 0;
@@ -44,17 +44,19 @@ VMGR::File::File()
 	ioMode = IOModes::ReadOnly;
 }
 
-bool VMGR::File::open(const char* path, IOModes mode)
+bool VMGR::File::open(Path* path, IOModes mode)
 {
+	if ((path == NULL) || (!path->isAbsolute))
+		return false;
+
 	if (mode == IOModes::ReadWrite)
 		return false;
 
 	isOpen = false;
 
-	char* strPath = new char[strlen(path) + 1];
-	strcpy(strPath, path);
-
-	uint32_t volumeID = atoi(strtok(strPath, ":"));
+	char* strVolumeID = path->getComponent(0);
+	uint32_t volumeID = atoi(strVolumeID);
+	delete [] strVolumeID;
 
 	LinkedList<Volume*>::Node* i = VOLUMES.head;
 	while (i != NULL)
@@ -72,25 +74,19 @@ bool VMGR::File::open(const char* path, IOModes mode)
 	}
 
 	if ((parentVolume == NULL) || 
-		(!parentVolume->fileSystem->find(parentVolume, strtok(NULL, ":"), this)))
-	{
-		delete [] strPath;
+		(!parentVolume->fileSystem->find(parentVolume, path, this)))
 		return false;
-	}
 
-	Path = new char[strlen(path) + 1];
-	strcpy(Path, path);
+	filePath = path;
 	isOpen = true;
-
-	delete [] strPath;
 
 	return true;
 }
 
-VMGR::File::File(const char* path, IOModes mode)
+VMGR::File::File(Path* path, IOModes mode)
 {
 	Name = NULL;
-	Path = NULL;
+	filePath = NULL;
 	parentVolume = NULL;
 	firstCluster = 0;
 	fileSize = 0;
@@ -98,6 +94,23 @@ VMGR::File::File(const char* path, IOModes mode)
 	ioMode = IOModes::ReadOnly;
 
 	open(path, mode);
+}
+
+VMGR::File::~File()
+{
+	if (Name != NULL)
+		delete [] Name;
+
+	if (filePath != NULL)
+		delete filePath;
+
+	Name = NULL;
+	filePath = NULL;
+	parentVolume = NULL;
+	firstCluster = 0;
+	fileSize = 0;
+	isOpen = false;
+	ioMode = IOModes::ReadOnly;
 }
 
 bool VMGR::File::read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead)
@@ -108,15 +121,6 @@ bool VMGR::File::read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uin
 bool VMGR::File::readAll(uint8_t* buffer, uint64_t bufferSize, uint64_t& bytesRead)
 {
 	return parentVolume->fileSystem->read(this, buffer, bufferSize, 0, 0, bytesRead);
-}
-
-VMGR::File::~File()
-{
-	if (Name != NULL)
-		delete [] Name;
-
-	if (Path != NULL)
-		delete []  Path;
 }
 
 uint8_t VMGR::generateVolumeID()

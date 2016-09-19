@@ -22,6 +22,7 @@
 #include "../vmgr.h"
 
 #include "../utils/bitfield.h"
+#include "../utils/path.h"
 
 #define FAT_COMMON_BPB_OFFSET	0x00
 #define FAT_FAT1216_BPB_OFFSET	0x24
@@ -127,7 +128,8 @@ namespace zos
 		public:
 			FAT();
 			void init(VMGR::Volume* volume);
-			bool find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile);
+			bool create(VMGR::Volume* volume, Path* filePath, VMGR::File* dstFile);
+			bool find(VMGR::Volume* volume, Path* filePath, VMGR::File* dstFile);
 			bool read(VMGR::File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
 		};
 	}

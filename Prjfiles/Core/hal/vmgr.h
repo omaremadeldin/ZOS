@@ -13,11 +13,9 @@
 #include "pmgr.h"
 
 #include "utils/linkedlist.h"
+#include "utils/path.h"
 
 #define VMGR_MAX_VOLUME_NAME	32
-#define VMGR_MAX_FILE_NAME		255
-#define VMGR_MAX_FILE_PATH		32767
-
 #define VMGR_MAX_FS_VARIABLES	8
 
 namespace zos
@@ -27,7 +25,6 @@ namespace zos
 	public:
 		class Volume;
 		class File;
-		class Directory;
 
 		class Filesystem
 		{
@@ -37,8 +34,10 @@ namespace zos
 
 		public:
 			virtual void init(Volume* volume) = 0;
-			virtual bool find(Volume* volume, const char* filePath, File* dstFile) = 0;
+			virtual bool create(Volume* volume, Path* filePath, File* dstFile) = 0;
+			virtual bool find(Volume* volume, Path* filePath, File* dstFile) = 0;
 			virtual bool read(File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead) = 0;
+			//virtual bool write(File* file, uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToWrite, uint64_t& bytesWritten) = 0;
 		};
 
 		class Volume
@@ -69,29 +68,21 @@ namespace zos
 
 		public:
 			char* Name;
-			char* Path;
+			Path* filePath;
 			Volume* parentVolume;
 			uint64_t firstCluster;
 			uint64_t fileSize;
 			bool isOpen;
+			bool isDirectory;
 			IOModes ioMode;
 
 		public:
 			File();
-			bool open(const char* path, IOModes mode);
-			File(const char* path, IOModes mode);
+			~File();
+			bool open(Path* path, IOModes mode);
+			File(Path* path, IOModes mode);
 			bool read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
 			bool readAll(uint8_t* buffer, uint64_t bufferSize, uint64_t& bytesRead);
-			~File();
-		};
-
-		class Directory
-		{
-		public:
-			char Name[VMGR_MAX_FILE_NAME];
-			char Path[VMGR_MAX_FILE_PATH];
-			Volume* parentVolume;
-			uint64_t firstCluster;
 		};
 
 	private:

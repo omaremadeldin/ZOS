@@ -20,7 +20,7 @@ ASFLAGS = -f elf
 
 FILESYSSRCS = hal/filesystems/fat.cpp
 VMODESSRCS = hal/vmodes/vmode7.cpp
-HALUTILSSRCS = hal/utils/format.cpp
+HALUTILSSRCS = hal/utils/path.cpp hal/utils/format.cpp
 HALSRCS = $(HALUTILSSRCS) $(FILESYSSRCS) hal/vmgr.cpp hal/pmgr.cpp hal/ide.cpp hal/pci.cpp $(VMODESSRCS) hal/video.cpp hal/crt.cpp hal/heap.cpp hal/vmm.cpp hal/pmm.cpp hal/kybrd.cpp hal/pit.cpp hal/pic.cpp hal/exceptions.cpp hal/idt.cpp hal/gdt.cpp hal/hal.cpp
 
 CPPSRCS = $(HALSRCS) kmain.cpp
@@ -62,11 +62,12 @@ hal/ide.o:				hal/ide.cpp
 hal/pmgr.o:				hal/pmgr.cpp
 hal/vmgr.o:				hal/vmgr.cpp
 
+hal/utils/format.o:		hal/utils/format.cpp
+hal/utils/path.o:		hal/utils/path.cpp
+
 hal/vmodes/vmode7.o:	hal/vmodes/vmode7.cpp
 
 hal/filesystems/fat.o: 	hal/filesystems/fat.cpp
-
-hal/utils/format.o:		hal/utils/format.cpp
 
 $(CPPOBJS):
 	$(CC) $(CFLAGS) $(INCLUDES) $? -o $@

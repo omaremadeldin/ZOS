@@ -330,15 +330,29 @@ void FAT::init(VMGR::Volume* volume)
 	volume->Online = true;
 }
 
-bool FAT::find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile)
+bool FAT::create(VMGR::Volume* volume, Path* filePath, VMGR::File* dstFile)
 {
 	if ((volume == NULL) || (!volume->Online))
+		return false;
+
+	if (filePath == NULL)
 		return false;
 
 	if (dstFile == NULL)
 		return false;
 
-	if (strlen(filePath) <= 1)
+	return false;
+}
+
+bool FAT::find(VMGR::Volume* volume, Path* filePath, VMGR::File* dstFile)
+{
+	if ((volume == NULL) || (!volume->Online))
+		return false;
+
+	if ((filePath == NULL) || (!filePath->isAbsolute))
+		return false;
+
+	if (dstFile == NULL)
 		return false;
 
 	const uint16_t FATType = volume->fsVariables[FAT_VAR_FATTYPE];
@@ -358,16 +372,12 @@ bool FAT::find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile)
 
 	FATEntry* entry = ((FATEntry*)buffer);
 
-	char* path = new char[strlen(filePath) + 1];	//Seperate copy of the path to convert it to lowercase & tokenize with strtok
-	strcpy(path, filePath);
-	//strtolower(path);
-
 	uint32_t currentCluster = (FATType == 32 ? volume->fsVariables[FAT_VAR_BPB_ROOTCLUS] : 0);
 
 	bool rootDirectory = (FATType == 32 ? false : true);
 	bool Found = true;
 
-	char* currentFileName = strtok(path, "/");
+	char* currentFileName = filePath->getComponent(1);
 
 	while (Found && (currentFileName != NULL))
 	{
@@ -484,14 +494,12 @@ bool FAT::find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile)
 								dstFile->fileSize = entry->DIR_FileSize;
 								dstFile->ioMode = VMGR::File::IOModes::ReadOnly;
 
-								delete [] path;
 								delete [] buffer;				
 								return true;
 							}
 							else
 							{
 								//ERROR: Invalid path (This isn't the last component in the path)
-								delete [] path;
 								delete [] buffer;
 								return false;
 							}
@@ -512,7 +520,6 @@ bool FAT::find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile)
 						{
 							//This is an invalid entry
 							//ERROR: Invalid entry
-							delete [] path;
 							delete [] buffer;
 							return false;
 						}
@@ -545,10 +552,9 @@ bool FAT::find(VMGR::Volume* volume, const char* filePath, VMGR::File* dstFile)
 			}
 		}
 
-		currentFileName = strtok(NULL, "/");
+		currentFileName = filePath->getNextComponent();
 	}
 
-	delete [] path;
 	delete [] buffer;
 
 	return false;
