@@ -341,6 +341,8 @@ bool FAT::create(VMGR::Volume* volume, Path* filePath, VMGR::File* dstFile)
 	if (dstFile == NULL)
 		return false;
 
+	
+
 	return false;
 }
 

@@ -172,3 +172,29 @@ char* Path::getNextComponent()
 
 	return result;
 }
+
+Path* Path::getParentPath()
+{
+	uint16_t newLength = length;
+	//  
+
+	while (path[newLength] == '/')
+		newLength--;
+
+	while(path[newLength] != '/')
+		newLength--;
+
+	newLength++;
+
+	if (newLength == 0)
+		return NULL;
+
+	char* strResult = new char[newLength + 1];
+	strncpy(strResult, path, newLength);
+	strResult[newLength] = '\0';
+
+	Path* result = new Path(strResult);
+	delete[] strResult;
+
+	return result;
+}

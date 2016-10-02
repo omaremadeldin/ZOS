@@ -278,17 +278,18 @@ void HAL::init()
 		m = m->nextNode;
 	}
 	
-	VMGR::File* x = new VMGR::File(new Path("/1/Folder 3/Folder 5/Folder 6/Test260.txt"), VMGR::File::IOModes::ReadOnly);
-	if ((x != NULL) && (x->isOpen))
+	Path* myPath = new Path("/1/Folder 3/Folder 5/Folder 6/Test260.txt");
+	VMGR::File* myFile = new VMGR::File(myPath, VMGR::File::IOModes::ReadOnly);
+	if ((myFile != NULL) && (myFile->isOpen))
 	{
-		debug("==Name:'%s'\n", x->Name);
-		debug("==Path:'%s'\n", x->filePath->toString());
-		debug("==First Cluster:0x%x\n", x->firstCluster);
-		debug("==File Size:%i\n", x->fileSize);
+		debug("==Name:'%s'\n", myFile->Name);
+		debug("==Path:'%s'\n", myFile->filePath->toString());
+		debug("==First Cluster:0%x\n", myFile->firstCluster);
+		debug("==File Size:%i\n", myFile->fileSize);
 
 		uint8_t* buffer = new uint8_t[1024];
 		uint64_t bytesRead = 0;
-		x->read(buffer, 1024, 6, 5, bytesRead);
+		myFile->read(buffer, 1024, 6, 5, bytesRead);
 		debug("==--bytesRead:%i\n", bytesRead);
 		buffer[bytesRead] = '\0';
 		debug("'%s'\n", buffer);
@@ -296,4 +297,5 @@ void HAL::init()
 	}
 
 	debug("Initializations Finished.\n");
+
 }
