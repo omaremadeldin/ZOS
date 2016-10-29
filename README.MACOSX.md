@@ -30,7 +30,7 @@ The toolchain versions used were:
     curl ftp://ftp.gnu.org/gnu/binutils/binutils-2.27.tar.bz2 | tar -jx -f - -C ~/src/
     curl ftp://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2 | tar -jx -f - -C ~/src/
     cd ~/src/build-binutils/
-    ../binutils-2.22/configure --prefix=$PREFIX --target=$TARGET --disable-multilib --disable-nls
+    ../binutils-2.27/configure --prefix=$PREFIX --target=$TARGET --disable-multilib --disable-nls
     make all
     sudo make install
     export PATH=$PATH:$PREFIX/bin
