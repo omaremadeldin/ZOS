@@ -1,34 +1,35 @@
-===ZapperOS=By=Omar Emad Eldin===
+# ZOS Environment Setup for Ubuntu
 
-This has only been tried on Ubuntu 14, other versions of the system may need some tweaking or may not work.
-The toolchain versions used were: 	binutils-2.22
-									gcc-5.0.2
+*This has only been tried on Ubuntu 14, other versions of the system may need some tweaking or may not work.*
 
-*Preferred build arguments:
-	i386-elf-gcc -c test.c (or) i386-elf-g++ -c test.cpp -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti
-	i386-elf-ld -o test -Ttext 0x0 -e main test.o
-	i386-elf-objcopy -R .note -R .comment -R .eh_frame -S -O binary test test.bin
+The toolchain versions used were: 
+- **binutils-2.22**
+- **gcc-5.0.2**
 
-*Required tools to build ZapperOS:
-	- i386-elf toolchain
-	- NASM
+### Recomended build arguments:
+1. `i386-elf-g++ -c test.cpp -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti`
+2. `i386-elf-ld -o test -Ttext 0x0 -e main test.o`
+3. `i386-elf-objcopy -R .note -R .comment -R .eh_frame -S -O binary test test.bin`
 
-*Required tools to debug ZapperOS:
-	- BOCHS(recommended)/QEMU
+### Required tools to build ZOS:
+- **i386-elf toolchain**
+- **NASM**
 
-*Required tools to build i386-elf toolchain:
-	- gcc-4.8			installed
-	- gcc-core-4.6.3 	source
-	- gcc-g++-4.6.3		source
-	- binutils-2.2 		source
-	- gmp-5.0.2 		source
-	- mpc-0.9 			source
-	- mpfr-3.1.0 		source
+### Required tools to debug ZOS:
+- **BOCHS**(recommended)/QEMU
 
-*Simply execute this script to build the toolchain:
+### Required tools to build i386-elf toolchain:
+- **gcc-4.8**			*installed*
+- **gcc-core-4.6.3** 	*source*
+- **gcc-g++-4.6.3**		*source*
+- **binutils-2.2** 		*source*
+- **gmp-5.0.2** 		*source*
+- **mpc-0.9**			*source*
+- **mpfr-3.1.0**		*source*
 
+### Simply execute this script to build the toolchain:
 	export CC=/usr/local/bin/gcc-4.8
- 	export CXX=/usr/local/bin/g++-4.8
+	export CXX=/usr/local/bin/g++-4.8
 	export CPP=/usr/local/bin/cpp-4.8
 	export LD=/usr/local/bin/gcc-4.8
 	export PREFIX=/usr/local/cross
