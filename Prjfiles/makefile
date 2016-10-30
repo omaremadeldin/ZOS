@@ -21,7 +21,7 @@ all: libc bootloader kernel
 
 all-run: all run
 
-run: $(OUT)
+run: run-bochs
 run-bochs: $(OUT)
 	echo "c" | bochs -q -f $(BXRC)
 
