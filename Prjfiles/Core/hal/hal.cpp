@@ -23,6 +23,7 @@
 #include "exceptions.h"
 #include "pic.h"
 #include "pit.h"
+#include "rtc.h"
 #include "kybrd.h"
 #include "pmm.h"
 #include "vmm.h"
@@ -183,6 +184,10 @@ void HAL::init()
 	PIT::init();
 	debug("PIT initialized.\n");
 	
+	//Real Time Clock
+	RTC::fetchTime();
+	debug("Date: %i-%i-%i, Time: %i:%i:%i.\n", RTC::Year, RTC::Month, RTC::Day, RTC::Hours, RTC::Minutes, RTC::Seconds);
+
 	enableInterrupts();
 	debug("Interrupts enabled.\n");
 	
@@ -277,25 +282,6 @@ void HAL::init()
 		debug("--Name:'%s', Online:%s, ID:%i\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID);
 		m = m->nextNode;
 	}
-	
-	Path* myPath = new Path("/1/Folder 3/Folder 5/Folder 6/Test260.txt");
-	VMGR::File* myFile = new VMGR::File(myPath, VMGR::File::IOModes::ReadOnly);
-	if ((myFile != NULL) && (myFile->isOpen))
-	{
-		debug("==Name:'%s'\n", myFile->Name);
-		debug("==Path:'%s'\n", myFile->filePath->toString());
-		debug("==First Cluster:0%x\n", myFile->firstCluster);
-		debug("==File Size:%i\n", myFile->fileSize);
-
-		uint8_t* buffer = new uint8_t[1024];
-		uint64_t bytesRead = 0;
-		myFile->read(buffer, 1024, 6, 5, bytesRead);
-		debug("==--bytesRead:%i\n", bytesRead);
-		buffer[bytesRead] = '\0';
-		debug("'%s'\n", buffer);
-		delete [] buffer;
-	}
 
 	debug("Initializations Finished.\n");
-
 }
