@@ -219,7 +219,7 @@ void HAL::init()
 	Video::clearScreen();
 	
 	debug("%i MBs of memory detected, %i MBs free to use.\n", \
-		memorySize/1024/1024, (PMM::getFreeBlocks() * PMM_BLOCK_SIZE)/1024/1024);
+		memorySize/1024/1024, (PMM::getFreeMemory()/1024/1024));
 	debug("Kernel size is %i KBs.\n", KERNEL_SIZE/1024);
 	
 	//Scanning PCI Bus for devices

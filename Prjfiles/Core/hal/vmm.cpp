@@ -98,7 +98,7 @@ void VMM::mapPage(PhysicalAddress pAddress, VirtualAddress vAddress)
 	
 	if (!pageDirectory[PDindex].Present)
 	{
-		PhysicalAddress p = PMM::alloc();
+		PhysicalAddress p = PMM::alloc(VMM_PAGE_SIZE);
 		
 		//TODO:Exceptions
 		//if (p == NULL)
@@ -149,7 +149,7 @@ void VMM::mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, size_t num
 
 VirtualAddress VMM::alloc(VirtualAddress vAddress)
 {
-	PhysicalAddress p = PMM::alloc();
+	PhysicalAddress p = PMM::alloc(VMM_PAGE_SIZE);
 	
 	if (p == NULL)
 		return NULL;

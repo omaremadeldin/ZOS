@@ -22,9 +22,6 @@
 #include <stdlib.h>
 
 #define PMM_BLOCK_SIZE			4096
-#define PMM_BLOCKS_PER_BYTE		8
-
-#define PMM_NPOS				-1
 
 namespace zos
 {
@@ -33,7 +30,7 @@ namespace zos
 	
 	class PMM
 	{
-	public:
+	private:
 		struct BMMEntry
 		{
 			enum Type : uint32_t
@@ -49,30 +46,40 @@ namespace zos
 			Type 			entryType;		//Entry Type
 			uint32_t 		acpi_null;		//Reserved for future use
 		}__attribute__((packed));
-		
-	private:
-		static uint8_t* buffer;
-		static uint32_t maxBlocks;
-		static uint32_t size;
-		static uint32_t freeBlocks;
 	
 	public:
-		static uint32_t getFreeBlocks();
-		
+		struct Chunk
+		{
+			PhysicalAddress	Address;		//Base address
+			uint32_t		Length;			//Length in no. of blocks
+		}__attribute__((packed));
+
 	private:
-		static bool testBlock(uint32_t blockIndex);
-		static void setBlockUsed(uint32_t blockIndex);
-		static void setBlockUnused(uint32_t blockIndex);
-		static void setBlocksUsed(uint32_t blockIndex, size_t num);
-		static void setBlocksUnused(uint32_t blockIndex, size_t num);
-		static void setRegionUsed(PhysicalAddress address, size_t size);
-		static void setRegionUnused(PhysicalAddress address, size_t size);
-		static int32_t firstFreeBlock();
-		static int32_t firstFreeBlocks(size_t num);
+		static uint32_t blockCount;
+		static Chunk* freeList;
+		static uint32_t freeListSize;
+		static uint32_t freeListMaxSize;
+		static Chunk* usedList;	
+		static uint32_t usedListSize;
+		static uint32_t usedListMaxSize;
+
+	private:
+		static void shiftFreeListRight(int32_t start);
+		static void shiftFreeListLeft(uint32_t start);
+		static bool isChunkInvalid(Chunk* chunk);
+		static void removeFreeChunk(Chunk* chunk);
+		static void removeUsedChunk(Chunk* chunk);
+		static Chunk* addFreeChunk(PhysicalAddress address, uint32_t length);
+		static Chunk* addUsedChunk(PhysicalAddress address, uint32_t length);
+		static Chunk* findFreeChunkContaining(PhysicalAddress address);
+		static Chunk* findUsedChunk(PhysicalAddress address);
+		static void setRegionUsed(PhysicalAddress address, uint32_t size);
+		static void setRegionUnused(PhysicalAddress address, uint32_t size);
 		static void processBMM(PhysicalAddress address, uint32_t length);
 		
 	public:
-		static PhysicalAddress alloc();
+		static uint32_t getFreeMemory();
+		static PhysicalAddress alloc(size_t size);
 		static void free(PhysicalAddress address);
 		static void init();		
 	};

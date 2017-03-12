@@ -24,97 +24,194 @@
 
 using namespace zos;
 
-uint8_t* PMM::buffer = NULL;
-uint32_t PMM::maxBlocks = 0;
-uint32_t PMM::size = 0;
-uint32_t PMM::freeBlocks = 0;
+uint32_t PMM::blockCount = 0;
+PMM::Chunk* PMM::freeList = NULL;
+uint32_t PMM::freeListSize = 0;
+uint32_t PMM::freeListMaxSize = 0;
+PMM::Chunk* PMM::usedList = NULL;
+uint32_t PMM::usedListSize = 0;
+uint32_t PMM::usedListMaxSize = 0;
 
-uint32_t PMM::getFreeBlocks()
+void PMM::shiftFreeListRight(int32_t start)
 {
-	return freeBlocks;
+	for (int32_t i = (freeListSize - 1); i >= start; i--)
+		freeList[i + 1] = freeList[i];
 }
 
-bool PMM::testBlock(uint32_t blockIndex)
+void PMM::shiftFreeListLeft(uint32_t start)
 {
-	return ((buffer[(blockIndex / PMM_BLOCKS_PER_BYTE)] & (1 << (blockIndex % PMM_BLOCKS_PER_BYTE))) != 0);
+	for (uint32_t i = start; i < (freeListSize - 1); i++)
+		freeList[i] = freeList[i + 1];
 }
 
-void PMM::setBlockUsed(uint32_t blockIndex)
+bool PMM::isChunkInvalid(PMM::Chunk* chunk)
 {
-	buffer[(blockIndex / PMM_BLOCKS_PER_BYTE)] |= (1 << (blockIndex % PMM_BLOCKS_PER_BYTE));
-	freeBlocks--;
+	if (chunk == NULL)
+		return true;
+
+	if (chunk->Length == 0)
+		return true;
+
+	return false;
 }
 
-void PMM::setBlockUnused(uint32_t blockIndex)
+void PMM::removeFreeChunk(PMM::Chunk* chunk)
 {
-	buffer[(blockIndex / PMM_BLOCKS_PER_BYTE)] &= ~(1 << (blockIndex % PMM_BLOCKS_PER_BYTE));
-	freeBlocks++;
+	if (freeListSize == 0)
+		return;
+
+	uint32_t pos = 0;
+
+	while ((pos < freeListSize) && (freeList[pos].Address != chunk->Address))
+		pos++;
+
+	shiftFreeListLeft(pos);
+
+	freeListSize--;
 }
 
-void PMM::setBlocksUsed(uint32_t blockIndex, size_t num)
+void PMM::removeUsedChunk(PMM::Chunk* chunk)
 {
-	for (uint32_t i = blockIndex; i < (blockIndex + num); i++)
-		setBlockUsed(i);
+	chunk->Address = NULL;
+	chunk->Length = 0;
+
+	usedListSize--;
 }
 
-void PMM::setBlocksUnused(uint32_t blockIndex, size_t num)
+PMM::Chunk* PMM::addFreeChunk(PhysicalAddress address, uint32_t length)
 {
-	for (uint32_t i = blockIndex; i < (blockIndex + num); i++)
-		setBlockUnused(i);
-}
+	uint32_t pos = 0;
 
-void PMM::setRegionUsed(PhysicalAddress address, size_t size)
-{
-	uint32_t blockIndex = address / PMM_BLOCK_SIZE;
-	uint32_t blocksCount = size / PMM_BLOCK_SIZE + ((size % PMM_BLOCK_SIZE != 0)? 1 : 0);
-
-	setBlocksUsed(blockIndex, blocksCount);
-}
-
-void PMM::setRegionUnused(PhysicalAddress address, size_t size)
-{
-	uint32_t blockIndex = address / PMM_BLOCK_SIZE;
-	uint32_t blocksCount = size / PMM_BLOCK_SIZE + ((size % PMM_BLOCK_SIZE != 0)? 1 : 0);
-
-	//Prevents Setting or Unsetting Block 0, as alloc can't return 0
-	if (blockIndex == 0)
+	if (freeListSize != 0)
 	{
-		blockIndex++;
-		blocksCount--;
+		while ((pos < freeListSize) && (freeList[pos].Address < address))
+			pos++;
+
+		shiftFreeListRight(pos);
 	}
 
-	setBlocksUnused(blockIndex, blocksCount);
+	freeList[pos].Address = address;
+	freeList[pos].Length = length;
+
+	freeListSize++;
+
+	return &freeList[pos];
 }
 
-int32_t PMM::firstFreeBlock()
+PMM::Chunk* PMM::addUsedChunk(PhysicalAddress address, uint32_t length)
 {
-	for (uint32_t i = 0; i < maxBlocks; i++)
-		if (!testBlock(i))
-			return i;
+	Chunk* chunk = usedList;
 
-	return PMM_NPOS;
-}
-
-int32_t PMM::firstFreeBlocks(size_t num)
-{
-	uint32_t currentIndex = 0;
-	uint32_t currentLength = 0;
-
-	for (uint32_t i = 1; i < maxBlocks; i++)
-	{
-		if (currentLength == 0)
-			currentIndex = i;
+	while (!isChunkInvalid(chunk))	//Loop till we find an empty chunk
+		chunk++;
 	
-		if (!testBlock(i))
-			currentLength++;
+	chunk->Address = address;
+	chunk->Length = length;
+
+	usedListSize++;
+
+	return chunk;
+}
+
+PMM::Chunk* PMM::findFreeChunkContaining(PhysicalAddress address)
+{
+	Chunk* chunk = freeList;
+
+	for (uint32_t i = 0, count = 0; (i < freeListMaxSize) && (count < freeListSize); i++)
+	{
+		if (isChunkInvalid(&chunk[i]))
+			continue;
 		else
-			currentLength = 0;
-	
-		if (currentLength == num)
-			return currentIndex;
+			count++;
+
+		uint32_t chunkFrom = chunk[i].Address;
+		uint32_t chunkTo = chunk[i].Address + chunk[i].Length;
+
+		if (!((chunkTo < address) || (chunkFrom > address)))
+			return &chunk[i];
 	}
 
-	return PMM_NPOS;
+	return NULL;
+}
+
+PMM::Chunk* PMM::findUsedChunk(PhysicalAddress address)
+{
+	Chunk* chunk = usedList;
+
+	for (uint32_t i = 0, count = 0; (i < usedListMaxSize) && (count < usedListSize); i++)
+	{
+		if (isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+
+		if (chunk[i].Address == address)
+			return &chunk[i];
+	}
+
+	return NULL;
+}
+
+void PMM::setRegionUsed(PhysicalAddress address, uint32_t size)
+{
+	PhysicalAddress from = address;
+	PhysicalAddress to = address + size;
+
+	Chunk* chunk = findFreeChunkContaining(from);
+
+	if ((chunk == NULL) || (chunk != findFreeChunkContaining(to)))
+		return;
+
+	uint32_t chunkFrom = chunk->Address;
+	uint32_t chunkTo = chunk->Address + chunk->Length;
+
+	if ((chunk->Address == address) && (chunk->Length == size))
+	{
+		removeFreeChunk(chunk);
+	}
+	else if ((chunkFrom < from) && (chunkTo > to))
+	{
+		removeFreeChunk(chunk);
+		addFreeChunk(chunkFrom, (from - chunkFrom));
+		addFreeChunk(to, (chunkTo - to));
+	}
+	else if ((chunkFrom >= from) && (chunkTo > to))
+	{
+		chunk->Address = to;
+		chunk->Length = (chunkTo - to);
+	}
+	else if ((chunkFrom < from) && (chunkTo <= to))
+	{
+		chunk->Length = (from - chunkFrom);
+	}
+}
+
+void PMM::setRegionUnused(PhysicalAddress address, uint32_t size)
+{
+	PhysicalAddress from = address;
+	PhysicalAddress to = address + size;
+
+	Chunk* chunkFrom = findFreeChunkContaining(from);
+	Chunk* chunkTo = findFreeChunkContaining(to);
+
+	if ((chunkFrom == NULL) && (chunkTo == NULL))
+	{
+		addFreeChunk(address, size);
+	}
+	else if ((chunkFrom != NULL) && (chunkTo == NULL))
+	{
+		chunkFrom->Length = to - (chunkFrom->Address + chunkFrom->Length);
+	}
+	else if ((chunkFrom == NULL) && (chunkTo != NULL))
+	{
+		chunkTo->Address = from;
+		chunkTo->Length = (chunkTo->Address + chunkTo->Length) - from;
+	}
+	else if ((chunkFrom != NULL) && (chunkTo != NULL) && (chunkFrom != chunkTo))
+	{
+		chunkFrom->Length = (to - (chunkFrom->Address + chunkFrom->Length)) + ((chunkTo->Address + chunkTo->Length) - from);
+		removeFreeChunk(chunkTo);
+	}
 }
 
 void PMM::processBMM(PhysicalAddress address, uint32_t length)
@@ -128,53 +225,86 @@ void PMM::processBMM(PhysicalAddress address, uint32_t length)
 	}
 }
 
-PhysicalAddress PMM::alloc()
+uint32_t PMM::getFreeMemory()
 {
-	//No free blocks -> out of memory
-	if (freeBlocks == 0)
+	uint32_t result = 0;
+	Chunk* chunk = freeList;
+
+	for (uint32_t i = 0, count = 0; (i < freeListMaxSize) && (count < freeListSize); i++)
+	{
+		if (isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+
+		result += chunk[i].Length;
+	}
+
+	return result;
+}
+
+PhysicalAddress PMM::alloc(size_t size)
+{
+	if (size == 0)
 		return NULL;
 
-	int32_t frame = firstFreeBlock();
+	uint32_t blocks = size / PMM_BLOCK_SIZE + ((size % PMM_BLOCK_SIZE != 0) ? 1 : 0);
+	uint32_t realSize = blocks * PMM_BLOCK_SIZE;
 
-	//Can't find free block -> out of memory
-	if (frame == PMM_NPOS)
-		return NULL;
+	Chunk* chunk = freeList;
 
-	setBlockUsed(frame);
+	for (uint32_t i = 0, count = 0; (i < freeListMaxSize) && (count < freeListSize); i++)
+	{
+		if (isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
 
-	PhysicalAddress address = frame * PMM_BLOCK_SIZE;
+		if (chunk[i].Length >= realSize)
+		{
+			PhysicalAddress address = chunk[i].Address;
 
-	return address;
+			setRegionUsed(address, realSize);
+			addUsedChunk(address, realSize);
+
+			return address;
+		}
+	}
+
+	return NULL;
 }
 
 void PMM::free(PhysicalAddress address)
 {
-	int32_t frame = address / PMM_BLOCK_SIZE;
+	if (address == NULL)
+		return;
 
-	setBlockUnused(frame);
+	Chunk* chunk = findUsedChunk(address);
+
+	if (chunk == NULL)
+		return;
+	
+	uint32_t length = chunk->Length;
+
+	removeUsedChunk(chunk);
+	setRegionUnused(address, length);
 }
 
 void PMM::init()
 {
-	const uint32_t bitmapLocation = KERNEL_VBASE + KERNEL_SIZE;
-	
-	//By default all blocks are used unless stated
-	uint32_t maxBlks = HAL::memorySize / PMM_BLOCK_SIZE + ((HAL::memorySize % PMM_BLOCK_SIZE != 0) ? 1 : 0);
-	
-	buffer = (uint8_t*)bitmapLocation;
-	maxBlocks = maxBlks;
-	size = (maxBlks / PMM_BLOCKS_PER_BYTE + ((maxBlks % PMM_BLOCKS_PER_BYTE != 0) ? 1 : 0));
-	freeBlocks = 0;
-	
-	//Default the memory map with 1s representing used blocks
-	memset((void*)bitmapLocation, 0xFF, size);
-	
-	//Flag the space used by the kernel as used
-	setRegionUsed(KERNEL_PBASE, KERNEL_SIZE);
-	
-	//Flag the space used by the memory map as used
-	setRegionUsed((bitmapLocation - KERNEL_VBASE + KERNEL_PBASE), size);
-	
-	//Process the BIOS Memory Map and set regions to used/unused accordingly
-	processBMM(BOOT_INFO->mmap_addr, BOOT_INFO->mmap_length);
+	blockCount = (HAL::memorySize / PMM_BLOCK_SIZE + ((HAL::memorySize % PMM_BLOCK_SIZE != 0) ? 1 : 0));
+
+	freeList = ((Chunk*)(KERNEL_VBASE + KERNEL_SIZE));		//The free chunk list will be located just after the kernel
+	freeListMaxSize = blockCount / 2;
+
+	usedList = (freeList + freeListMaxSize);		//The used chunk list will be located after the free list
+	usedListMaxSize = blockCount;
+
+	memset(freeList, 0, (freeListMaxSize * sizeof(Chunk))); 	//Default all free chunk list items to invalid
+	memset(usedList, 0, (usedListMaxSize * sizeof(Chunk))); 	//Default all used chunk list items to invalid
+
+	processBMM(BOOT_INFO->mmap_addr, BOOT_INFO->mmap_length);	//Process the BIOS Memory Map and set regions to used/unused accordingly
+
+	setRegionUsed(NULL, PMM_BLOCK_SIZE);	//First block is always used so as not to return a NULL address
+	setRegionUsed(KERNEL_PBASE, (KERNEL_SIZE + (freeListMaxSize * sizeof(Chunk)) + (usedListMaxSize * sizeof(Chunk))));	//Flag the space used by the kernel as used
 }
