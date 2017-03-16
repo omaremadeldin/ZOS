@@ -141,20 +141,21 @@ void VMM::mapPage(PhysicalAddress pAddress, VirtualAddress vAddress)
 	flushTLBEntry(vAddress);
 }
 
-void VMM::mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, size_t num)
+void VMM::mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, uint32_t num)
 {
-	for (size_t i = 0; i < num; i++)
+	for (uint32_t i = 0; i < num; i++)
 		mapPage(pAddress + (i * VMM_PAGE_SIZE), vAddress + (i * VMM_PAGE_SIZE));
 }
 
-VirtualAddress VMM::alloc(VirtualAddress vAddress)
+VirtualAddress VMM::alloc(VirtualAddress vAddress, size_t size)
 {
-	PhysicalAddress p = PMM::alloc(VMM_PAGE_SIZE);
+	uint32_t pages = size / VMM_PAGE_SIZE + ((size % VMM_PAGE_SIZE != 0) ? 1 : 0);
+	PhysicalAddress p = PMM::alloc(pages * VMM_PAGE_SIZE);
 	
 	if (p == NULL)
 		return NULL;
 	
-	mapPage(p, vAddress);
+	mapPages(p, vAddress, pages);
 	
 	return vAddress;
 }
@@ -172,11 +173,34 @@ void VMM::free(VirtualAddress vAddress)
 	
 	if (!pageTable[PTindex].Present)
 		return;
+
+	PMM::Chunk* chunk = PMM::findUsedChunk(pageTable[PTindex].getFrame());
 	
+	if (chunk == NULL)
+		return;
+
+	uint32_t pageCount = chunk->Length / VMM_PAGE_SIZE + ((chunk->Length % VMM_PAGE_SIZE != 0) ? 1 : 0); 
+
 	PMM::free(pageTable[PTindex].getFrame());
-	pageTable[PTindex].Present = false;
+
+	for (uint32_t i = 0; i < pageCount; i++)
+	{
+		PDindex = getDirectoryIndex(vAddress + (i * VMM_PAGE_SIZE));
+		PTindex = getPageTableIndex(vAddress + (i * VMM_PAGE_SIZE));
+
+		if (!pageDirectory[PDindex].Present)
+			continue;
+
+		PageTable curPT = pageDirectory[PDindex].getFrame();
+		lookupPageTable(curPT);
 	
-	flushTLBEntry(vAddress);
+		if (!pageTable[PTindex].Present)
+			continue;
+
+		pageTable[PTindex].Present = false;
+
+		flushTLBEntry(vAddress + (i * VMM_PAGE_SIZE));
+	}
 }
 
 void VMM::init()

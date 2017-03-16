@@ -6,142 +6,279 @@
 //By Omar Emad Eldin
 //==========================================
 
-//TODO:Check loops so they can't be larger that max block
-//TODO:Review usage of Heap::size
-
 #include "heap.h"
 
 #include "exceptions.h"
-#include "vmm.h"
 
 #include <string.h>
 
 using namespace zos;
 
-uint32_t Heap::pages = 0;
-uint8_t* Heap::buffer = NULL;
-uint32_t Heap::maxBlocks = 0;
-uint32_t Heap::size = 0;
-uint32_t Heap::freeBlocks = 0;
+uint32_t Heap::pageCount = 0;
+Heap::Chunk* Heap::freeList = NULL;
+uint32_t Heap::freeListSize = 0;
+uint32_t Heap::freeListMaxSize = 0;
+uint32_t Heap::freeListPageCount = 0;
+Heap::Chunk* Heap::usedList = NULL;
+uint32_t Heap::usedListSize = 0;
+uint32_t Heap::usedListMaxSize = 0;
+uint32_t Heap::usedListPageCount = 0;
+Heap::Chunk* Heap::largestFreeChunk = NULL;
 
-bool Heap::testBlock(uint32_t blockIndex)
+void Heap::shiftFreeListRight(int32_t start)
 {
-	return ((buffer[(blockIndex / HEAP_BLOCKS_PER_BYTE)] & (1 << (blockIndex % HEAP_BLOCKS_PER_BYTE))) != 0);
+	for (int32_t i = (freeListSize - 1); i >= start; i--)
+		freeList[i + 1] = freeList[i];
 }
 
-void Heap::setBlockUsed(uint32_t blockIndex)
+void Heap::shiftFreeListLeft(uint32_t start)
 {
-	buffer[(blockIndex / HEAP_BLOCKS_PER_BYTE)] |= (1 << (blockIndex % HEAP_BLOCKS_PER_BYTE));
-	freeBlocks--;
+	for (uint32_t i = start; i < (freeListSize - 1); i++)
+		freeList[i] = freeList[i + 1];
 }
 
-void Heap::setBlockUnused(uint32_t blockIndex)
+bool Heap::isChunkInvalid(Chunk* chunk)
 {
-	buffer[(blockIndex / HEAP_BLOCKS_PER_BYTE)] &= ~(1 << (blockIndex % HEAP_BLOCKS_PER_BYTE));
-	freeBlocks++;
+	if (chunk == NULL)
+		return true;
+
+	if (chunk->Length == 0)
+		return true;
+
+	return false;
 }
 
-void Heap::setBlocksUsed(uint32_t blockIndex, size_t num)
+void Heap::removeFreeChunk(Heap::Chunk* chunk)
 {
-	for (uint32_t i = blockIndex; i < (blockIndex + num); i++)
-		setBlockUsed(i);
+	if (freeListSize == 0)
+		return;
+
+	uint32_t pos = 0;
+
+	while ((pos < freeListSize) && (freeList[pos].Address != chunk->Address))
+		pos++;
+
+	shiftFreeListLeft(pos);
+
+	freeListSize--;
+
+	if (largestFreeChunk == chunk)
+		largestFreeChunk = NULL;
 }
 
-void Heap::setBlocksUnused(uint32_t blockIndex, size_t num)
+void Heap::removeUsedChunk(Heap::Chunk* chunk)
 {
-	for (uint32_t i = blockIndex; i < (blockIndex + num); i++)
-		setBlockUnused(i);
+	chunk->Address = NULL;
+	chunk->Length = 0;
+
+	usedListSize--;
 }
 
-int32_t Heap::firstFreeBlock()
+Heap::Chunk* Heap::addFreeChunk(VirtualAddress address, uint32_t length)
 {
-	for (uint32_t i = 0; i < maxBlocks; i++)
-		if (!testBlock(i))
-			return i;
-
-	return HEAP_NPOS;
-}
-
-int32_t Heap::firstFreeBlocks(size_t num)
-{
-	uint32_t currentIndex = 0;
-	uint32_t currentLength = 0;
-
-	for (uint32_t i = 1; i < maxBlocks; i++)
+	if (freeListSize == freeListMaxSize)
 	{
-		if (currentLength == 0)
-			currentIndex = i;
+		if (VMM::alloc(HEAP_FREELIST + (freeListPageCount * VMM_PAGE_SIZE), VMM_PAGE_SIZE) == NULL)
+		{
+			Exceptions::throwException("Heap Exception", "Heap::addFreeChunk(VirtualAddress, uint32_t)[1]: Cannot expand the heap free list");
+			return NULL;
+		}
+
+		freeListPageCount++;
+		freeListMaxSize = (freeListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
+	}
+
+	uint32_t pos = 0;
+
+	if (freeListSize != 0)
+	{
+		while ((pos < freeListSize) && (freeList[pos].Address < address))
+			pos++;
+
+		shiftFreeListRight(pos);
+	}
+
+	freeList[pos].Address = address;
+	freeList[pos].Length = length;
+
+	freeListSize++;
+
+	if ((largestFreeChunk == NULL) || (largestFreeChunk->Length < length))
+		largestFreeChunk = &freeList[pos];
+
+	return &freeList[pos];
+}
+
+Heap::Chunk* Heap::addUsedChunk(VirtualAddress address, uint32_t length)
+{
+	if (usedListSize == usedListMaxSize)
+	{
+		if (VMM::alloc(HEAP_USEDLIST + (usedListPageCount * VMM_PAGE_SIZE), VMM_PAGE_SIZE) == NULL)
+		{
+			Exceptions::throwException("Heap Exception", "Heap::addUsedChunk(VirtualAddress, uint32_t)[1]: Cannot expand the heap used list");
+			return NULL;
+		}
+
+		usedListPageCount++;
+		usedListMaxSize = (usedListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
+	}
+
+	Chunk* chunk = usedList;
+
+	while (!isChunkInvalid(chunk))	//Loop till we find an empty chunk
+		chunk++;
 	
-		if (!testBlock(i))
-			currentLength++;
+	chunk->Address = address;
+	chunk->Length = length;
+
+	usedListSize++;
+
+	return chunk;
+}
+
+Heap::Chunk* Heap::findFreeChunkContaining(VirtualAddress address)
+{
+	Chunk* chunk = freeList;
+
+	for (uint32_t i = 0, count = 0; (i < freeListMaxSize) && (count < freeListSize); i++)
+	{
+		if (isChunkInvalid(&chunk[i]))
+			continue;
 		else
-			currentLength = 0;
-	
-		if (currentLength == num)
-			return currentIndex;
+			count++;
+
+		uint32_t chunkFrom = chunk[i].Address;
+		uint32_t chunkTo = chunk[i].Address + chunk[i].Length;
+
+		if (!((chunkTo < address) || (chunkFrom > address)))
+			return &chunk[i];
 	}
 
-	return HEAP_NPOS;
+	return NULL;
 }
 
-void Heap::updateSize(bool increase)
+Heap::Chunk* Heap::findUsedChunk(VirtualAddress address)
 {
-	if (increase)
+	Chunk* chunk = usedList;
+
+	for (uint32_t i = 0, count = 0; (i < usedListMaxSize) && (count < usedListSize); i++)
 	{
-		if (VMM::alloc(HEAP_BASEADDRESS + (pages++ * VMM_PAGE_SIZE)) == NULL)
-		{
-			Exceptions::throwException("Heap Exception", "Heap::updateSize()[1]: Cannot increase the heap base address");
-			return;
-		}
-		
-		maxBlocks += (VMM_PAGE_SIZE / HEAP_BLOCK_SIZE);
-		freeBlocks += (VMM_PAGE_SIZE / HEAP_BLOCK_SIZE);
-		
-		if (pages % HEAP_BLOCKS_PER_BYTE == 0)
-		{
-			if (VMM::alloc(HEAP_BITMAP + ((pages / HEAP_BLOCKS_PER_BYTE) * VMM_PAGE_SIZE)) == NULL)
-			{
-				Exceptions::throwException("Heap Exception", "Heap::updateSize()[2]: Cannot increase the heap bitmap");
-				return;
-			}
-			
-			memset((void*)(HEAP_BITMAP + ((pages / HEAP_BLOCKS_PER_BYTE) * VMM_PAGE_SIZE)), 0, VMM_PAGE_SIZE / HEAP_BLOCKS_PER_BYTE);
-		}
+		if (isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+
+		if (chunk[i].Address == address)
+			return &chunk[i];
 	}
-	else
+
+	return NULL;
+}
+
+void Heap::setRegionUsed(VirtualAddress address, uint32_t size)
+{
+	VirtualAddress from = address;
+	VirtualAddress to = address + size;
+
+	Chunk* chunk = findFreeChunkContaining(from);
+
+	if ((chunk == NULL) || (chunk != findFreeChunkContaining(to)))
+		return;
+
+	uint32_t chunkFrom = chunk->Address;
+	uint32_t chunkTo = chunk->Address + chunk->Length;
+
+	if ((chunk->Address == address) && (chunk->Length == size))
 	{
-		if (pages == 1)
-			return;
-		
-		VMM::free(HEAP_BASEADDRESS + (pages-- * VMM_PAGE_SIZE));
-		maxBlocks = (maxBlocks - (VMM_PAGE_SIZE / HEAP_BLOCK_SIZE));
-		
-		if (pages % HEAP_BLOCKS_PER_BYTE == 0)
-			VMM::free(HEAP_BITMAP + ((pages / HEAP_BLOCKS_PER_BYTE) * VMM_PAGE_SIZE));
+		removeFreeChunk(chunk);
+	}
+	else if ((chunkFrom < from) && (chunkTo > to))
+	{
+		removeFreeChunk(chunk);
+		addFreeChunk(chunkFrom, (from - chunkFrom));
+		addFreeChunk(to, (chunkTo - to));
+	}
+	else if ((chunkFrom >= from) && (chunkTo > to))
+	{
+		chunk->Address = to;
+		chunk->Length = (chunkTo - to);
+	}
+	else if ((chunkFrom < from) && (chunkTo <= to))
+	{
+		chunk->Length = (from - chunkFrom);
+	}
+}
+
+void Heap::setRegionUnused(VirtualAddress address, uint32_t size)
+{
+	VirtualAddress from = address;
+	VirtualAddress to = address + size;
+
+	Chunk* chunkFrom = findFreeChunkContaining(from);
+	Chunk* chunkTo = findFreeChunkContaining(to);
+
+	if ((chunkFrom == NULL) && (chunkTo == NULL))
+	{
+		addFreeChunk(address, size);
+	}
+	else if ((chunkFrom != NULL) && (chunkTo == NULL))
+	{
+		chunkFrom->Length = to - (chunkFrom->Address + chunkFrom->Length);
+	}
+	else if ((chunkFrom == NULL) && (chunkTo != NULL))
+	{
+		chunkTo->Address = from;
+		chunkTo->Length = (chunkTo->Address + chunkTo->Length) - from;
+	}
+	else if ((chunkFrom != NULL) && (chunkTo != NULL) && (chunkFrom != chunkTo))
+	{
+		chunkFrom->Length = (to - (chunkFrom->Address + chunkFrom->Length)) + ((chunkTo->Address + chunkTo->Length) - from);
+		removeFreeChunk(chunkTo);
 	}
 }
 
 void* operator new(size_t objectSize)
 {	
-	if (objectSize > 0xFFFFFFFF)
+	if (objectSize == 0)
 		return NULL;
-	
-	if (((Heap::maxBlocks - Heap::freeBlocks) * HEAP_BLOCK_SIZE) + objectSize >= (Heap::pages * VMM_PAGE_SIZE))
-		Heap::updateSize(true);
-	
-	int32_t n = Heap::firstFreeBlocks(objectSize + 4);
-	
-	if (n == HEAP_NPOS)
-		return NULL;
-	
-	uint32_t* heapBuffer = ((uint32_t*)(HEAP_BASEADDRESS + (n * HEAP_BLOCK_SIZE)));
-	heapBuffer[0] = objectSize;
-	
-	Heap::setBlocksUsed(n, objectSize + 4);
-	
-	heapBuffer += 4*HEAP_BLOCK_SIZE / (sizeof(uint32_t));
-	
-	return heapBuffer;
+
+	if ((Heap::largestFreeChunk != NULL) && (Heap::largestFreeChunk->Length < objectSize))
+	{
+		uint32_t sizeNeeded = objectSize - Heap::largestFreeChunk->Length;
+		uint32_t pagesNeeded = sizeNeeded / VMM_PAGE_SIZE + ((sizeNeeded % VMM_PAGE_SIZE != 0) ? 1 : 0);
+
+		if (VMM::alloc(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE)) == NULL)
+		{
+			Exceptions::throwException("Heap Exception", "operator new(size_t)[1]: Cannot expand heap space");
+			return NULL;
+		}
+
+		Heap::setRegionUnused(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE));
+		Heap::pageCount += pagesNeeded;
+	}
+
+	Heap::Chunk* chunk = Heap::freeList;
+
+	for (uint32_t i = 0, count = 0; (i < Heap::freeListMaxSize) && (count < Heap::freeListSize); i++)
+	{
+		if (Heap::isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+
+		if (chunk[i].Length >= objectSize)
+		{
+			VirtualAddress address = chunk[i].Address;
+
+			Heap::setRegionUsed(address, objectSize);
+			Heap::addUsedChunk(address, objectSize);
+
+			return (void*)address;
+		}
+	}
+
+
+	return NULL;
 }
 
 void operator delete(void* p)
@@ -149,18 +286,17 @@ void operator delete(void* p)
 	if (p == NULL)
 		return;
 
-	uint32_t* heapBuffer = (uint32_t*)p;
+	VirtualAddress address = (VirtualAddress)p;
+
+	Heap::Chunk* chunk = Heap::findUsedChunk(address);
+
+	if (chunk == NULL)
+		return;
 	
-	size_t objectSize = heapBuffer[-1];
-	
-	VirtualAddress address = ((VirtualAddress)p - HEAP_BASEADDRESS - (4 * HEAP_BLOCK_SIZE));
-	
-	int32_t n = address / HEAP_BLOCK_SIZE;
-	
-	Heap::setBlocksUnused(n, objectSize + 4);
-	
-	if (((Heap::maxBlocks - Heap::freeBlocks) * HEAP_BLOCK_SIZE) - objectSize <= (Heap::pages * VMM_PAGE_SIZE))
-		Heap::updateSize(false);
+	uint32_t length = chunk->Length;
+
+	Heap::removeUsedChunk(chunk);
+	Heap::setRegionUnused(address, length);
 }
 
 void* operator new[](size_t arrSize)
@@ -175,26 +311,35 @@ void operator delete[](void* p)
 
 void Heap::init()
 {
-	pages = 0;
-	
-	if (VMM::alloc(HEAP_BITMAP) == NULL)
+	if (VMM::alloc(HEAP_BASEADDRESS, VMM_PAGE_SIZE) == NULL)
 	{
-		Exceptions::throwException("Heap Exception", "Heap::init()[1]: Cannot map the heap bitmap");
+		Exceptions::throwException("Heap Exception", "Heap::init()[1]: Cannot map the heap base address");
 		return;
 	}
-	
-	if (VMM::alloc(HEAP_BASEADDRESS + (pages++ * VMM_PAGE_SIZE)) == NULL)
+
+	pageCount++;		
+
+	if (VMM::alloc(HEAP_FREELIST, VMM_PAGE_SIZE) == NULL)
 	{
-		Exceptions::throwException("Heap Exception", "Heap::init()[2]: Cannot map the heap base address");
+		Exceptions::throwException("Heap Exception", "Heap::init()[2]: Cannot map the heap free list");
 		return;
 	}
-	
-	uint32_t maxBlks = (pages * VMM_PAGE_SIZE) / HEAP_BLOCK_SIZE;
-	
-	buffer = (uint8_t*)HEAP_BITMAP;
-	maxBlocks = maxBlks;
-	size = (maxBlks / HEAP_BLOCKS_PER_BYTE + ((maxBlks % HEAP_BLOCKS_PER_BYTE != 0) ? 1 : 0));
-	freeBlocks = maxBlks;
-	
-	memset((void*)HEAP_BITMAP, 0, size);
+
+	freeList = (Chunk*)HEAP_FREELIST;
+	freeListPageCount++;
+	freeListMaxSize = (freeListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
+	memset(freeList, 0, freeListMaxSize * sizeof(Chunk));
+
+	setRegionUnused(HEAP_BASEADDRESS, VMM_PAGE_SIZE);
+
+	if (VMM::alloc(HEAP_USEDLIST, VMM_PAGE_SIZE) == NULL)
+	{
+		Exceptions::throwException("Heap Exception", "Heap::init()[3]: Cannot map the heap used list");
+		return;
+	}
+
+	usedList = (Chunk*)HEAP_USEDLIST;
+	usedListPageCount++;
+	usedListMaxSize = (usedListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
+	memset(usedList, 0, usedListMaxSize * sizeof(Chunk));
 }

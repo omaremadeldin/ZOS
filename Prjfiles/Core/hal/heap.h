@@ -10,33 +10,47 @@
 
 #include <stdlib.h>
 
-#define HEAP_BITMAP				0xCCC00000
-#define HEAP_BASEADDRESS		0xCCD00000
-#define HEAP_BLOCK_SIZE			1
-#define HEAP_BLOCKS_PER_BYTE	8
+#include "vmm.h"
 
-#define HEAP_NPOS	-1
+#define HEAP_FREELIST			0xCC000000
+#define HEAP_USEDLIST			0xCD000000
+#define HEAP_BASEADDRESS		0xCE000000
 
 namespace zos
 {
 	class Heap
 	{
 	private:
-		static uint32_t pages;
-		static uint8_t* buffer;
-		static uint32_t maxBlocks;
-		static uint32_t size;
-		static uint32_t freeBlocks;
-		
+		struct Chunk
+		{
+			VirtualAddress	Address;		//Base address
+			uint32_t		Length;			//Length in no. of blocks
+		}__attribute__((packed));
+
 	private:
-		static bool testBlock(uint32_t blockIndex);
-		static void setBlockUsed(uint32_t blockIndex);
-		static void setBlockUnused(uint32_t blockIndex);
-		static void setBlocksUsed(uint32_t blockIndex, size_t num);
-		static void setBlocksUnused(uint32_t blockIndex, size_t num);
-		static int32_t firstFreeBlock();
-		static int32_t firstFreeBlocks(size_t num);
-		static void updateSize(bool increase);
+		static uint32_t pageCount;			//Pages for the heap itself
+		static Chunk* freeList;
+		static uint32_t freeListSize;
+		static uint32_t freeListMaxSize;
+		static uint32_t freeListPageCount;
+		static Chunk* usedList;	
+		static uint32_t usedListSize;
+		static uint32_t usedListMaxSize;
+		static uint32_t usedListPageCount;
+		static Chunk* largestFreeChunk;
+		
+	private:		
+		static void shiftFreeListRight(int32_t start);
+		static void shiftFreeListLeft(uint32_t start);
+		static bool isChunkInvalid(Chunk* chunk);
+		static void removeFreeChunk(Chunk* chunk);
+		static void removeUsedChunk(Chunk* chunk);
+		static Chunk* addFreeChunk(VirtualAddress address, uint32_t length);
+		static Chunk* addUsedChunk(VirtualAddress address, uint32_t length);
+		static Chunk* findFreeChunkContaining(VirtualAddress address);
+		static Chunk* findUsedChunk(VirtualAddress address);
+		static void setRegionUsed(VirtualAddress address, uint32_t size);
+		static void setRegionUnused(VirtualAddress address, uint32_t size);
 		
 	private:
 		friend void* ::operator new(size_t objectSize);

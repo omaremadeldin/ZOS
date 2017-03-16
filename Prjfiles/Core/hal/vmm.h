@@ -127,8 +127,8 @@ namespace zos
 		
 	public:
 		static void mapPage(PhysicalAddress pAddress, VirtualAddress vAddress);
-		static void mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, size_t num);
-		static VirtualAddress alloc(VirtualAddress vAddress);
+		static void mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, uint32_t num);
+		static VirtualAddress alloc(VirtualAddress vAddress, size_t size);
 		static void free(VirtualAddress vAddress);
 		static void init();
 	};

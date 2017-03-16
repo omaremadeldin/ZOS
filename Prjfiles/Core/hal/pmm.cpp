@@ -269,7 +269,7 @@ PhysicalAddress PMM::alloc(size_t size)
 
 			return address;
 		}
-	}
+	}	
 
 	return NULL;
 }
@@ -297,8 +297,12 @@ void PMM::init()
 	freeList = ((Chunk*)(KERNEL_VBASE + KERNEL_SIZE));		//The free chunk list will be located just after the kernel
 	freeListMaxSize = blockCount / 2;
 
-	usedList = (freeList + freeListMaxSize);		//The used chunk list will be located after the free list
+	KERNEL_SIZE += (freeListMaxSize * sizeof(Chunk));
+
+	usedList = ((Chunk*)(KERNEL_VBASE + KERNEL_SIZE));		//The used chunk list will be located after the free list
 	usedListMaxSize = blockCount;
+
+	KERNEL_SIZE += (usedListMaxSize * sizeof(Chunk));
 
 	memset(freeList, 0, (freeListMaxSize * sizeof(Chunk))); 	//Default all free chunk list items to invalid
 	memset(usedList, 0, (usedListMaxSize * sizeof(Chunk))); 	//Default all used chunk list items to invalid
@@ -306,5 +310,5 @@ void PMM::init()
 	processBMM(BOOT_INFO->mmap_addr, BOOT_INFO->mmap_length);	//Process the BIOS Memory Map and set regions to used/unused accordingly
 
 	setRegionUsed(NULL, PMM_BLOCK_SIZE);	//First block is always used so as not to return a NULL address
-	setRegionUsed(KERNEL_PBASE, (KERNEL_SIZE + (freeListMaxSize * sizeof(Chunk)) + (usedListMaxSize * sizeof(Chunk))));	//Flag the space used by the kernel as used
+	setRegionUsed(KERNEL_PBASE, KERNEL_SIZE);	//Flag the space used by the kernel as used
 }

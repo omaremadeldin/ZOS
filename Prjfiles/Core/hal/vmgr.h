@@ -79,7 +79,7 @@ namespace zos
 		public:
 			File();
 			~File();
-			bool open(Path* path, IOModes mode);
+			bool open(Path* path, IOModes mode = ReadOnly);
 			File(Path* path, IOModes mode);
 			bool read(uint8_t* buffer, uint64_t bufferSize, uint64_t offset, uint64_t bytesToRead, uint64_t& bytesRead);
 			bool readAll(uint8_t* buffer, uint64_t bufferSize, uint64_t& bytesRead);

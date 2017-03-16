@@ -30,6 +30,8 @@ namespace zos
 	
 	class PMM
 	{
+		friend class VMM;
+
 	private:
 		struct BMMEntry
 		{
@@ -47,7 +49,7 @@ namespace zos
 			uint32_t 		acpi_null;		//Reserved for future use
 		}__attribute__((packed));
 	
-	public:
+	private:
 		struct Chunk
 		{
 			PhysicalAddress	Address;		//Base address
