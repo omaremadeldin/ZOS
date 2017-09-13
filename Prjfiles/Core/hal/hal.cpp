@@ -5,13 +5,17 @@
 //==========================================
 //Used Acronyms:
 //--------------
-//* IDT = Interrupt Descriptor Table
-//* PIC = Programmable Interrupt Controller
-//* PIT = Programmable Interval Timer
-//* PMM = Physical Memory Manager
-//* VMM = Virtual Memory Manager
-//* PCI = Peripheral Component Interconnect
-//* IDE = Integrated Drive Electronics
+//* GDT  = Global Descriptor Table
+//* IDT  = Interrupt Descriptor Table
+//* PIC  = Programmable Interrupt Controller
+//* PIT  = Programmable Interval Timer
+//* RTC  = Real Time Clock
+//* PMM  = Physical Memory Manager
+//* VMM  = Virtual Memory Manager
+//* PCI  = Peripheral Component Interconnect
+//* IDE  = Integrated Drive Electronics
+//* PMGR = Partition Manager
+//* VMGR = Volume Manager
 //==========================================
 //By Omar Emad Eldin
 //==========================================
@@ -44,6 +48,7 @@
 using namespace zos;
 
 uint32_t HAL::memorySize = 0;
+uint32_t HAL::systemTimer = 0;
 
 uint8_t HAL::inportb(uint16_t port)
 {
@@ -139,12 +144,69 @@ void HAL::debug(const char* s, ...)
 	va_end(args);
 }
 
+uint32_t HAL::getUsedKernelHeap()
+{
+	uint32_t result = 0;
+
+	Heap::Chunk* chunk = Heap::usedList;
+	for (uint32_t i = 0, count = 0; (i < Heap::usedListMaxSize) && (count < Heap::usedListSize); i++)
+	{
+		if (Heap::isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+
+		result += chunk[i].Length;
+	}
+
+	return result;
+}
+
+uint32_t HAL::getFreeKernelHeap()
+{
+	uint32_t result = 0;
+
+	Heap::Chunk* chunk = Heap::freeList;
+	for (uint32_t i = 0, count = 0; (i < Heap::freeListMaxSize) && (count < Heap::freeListSize); i++)
+	{
+		if (Heap::isChunkInvalid(&chunk[i]))
+			continue;
+		else
+			count++;
+		
+		result += chunk[i].Length;
+	}
+
+	return result;
+}
+
+uint32_t HAL::random(uint32_t max)
+{
+	static uint32_t random_seed = 0;
+	random_seed = random_seed + systemTimer * 1103515245 + 12345;
+	return (uint32_t)(random_seed / 65536) % (max + 1); 
+}
+
 void HAL::sleep(uint32_t ms)
 {
 	uint32_t current = systemTimer;
 
 	while (systemTimer < (current + ms));
 }
+
+HAL::DateTime HAL::getCurrentDateTime()
+{
+	RTC::fetchTime();
+
+	return {
+		RTC::Year,
+		RTC::Month,
+		RTC::Day,
+		RTC::Hours,
+		RTC::Minutes,
+		RTC::Seconds
+	};
+} 
 
 void inline HAL::enableInterrupts()
 {
@@ -186,7 +248,7 @@ void HAL::init()
 	
 	//Real Time Clock
 	RTC::fetchTime();
-	debug("Date: %i-%i-%i, Time: %i:%i:%i.\n", RTC::Year, RTC::Month, RTC::Day, RTC::Hours, RTC::Minutes, RTC::Seconds);
+	debug("Date: %2i-%2i-%2i, Time: %2i:%2i:%2i.\n", RTC::Year, RTC::Month, RTC::Day, RTC::Hours, RTC::Minutes, RTC::Seconds);
 
 	enableInterrupts();
 	debug("Interrupts enabled.\n");
@@ -218,9 +280,8 @@ void HAL::init()
 	Video::selectVideoMode(new vmodes::VMode7);
 	Video::clearScreen();
 	
-	debug("%i MBs of memory detected, %i MBs free to use.\n", \
-		memorySize/1024/1024, (PMM::getFreeMemory()/1024/1024));
-	debug("Kernel size is %i KBs.\n", KERNEL_SIZE/1024);
+	debug("%g of memory detected, %g free to use.\n", memorySize, PMM::getFreeMemory());
+	debug("Kernel size is %g.\n", KERNEL_SIZE);
 	
 	//Scanning PCI Bus for devices
 	debug("Scanning PCI Bus for devices... ");
@@ -243,8 +304,8 @@ void HAL::init()
 	{
 		if (k->value->deviceType == IDE::Controller::Channel::Device::ATA)
 		{
-			uint64_t diskSize = (k->value->maxLBA / (1024 * 1024 / IDE_ATA_BYTESPERSECTOR));
-			debug("--Type:ATA, Model:'%s', Size:%iMBs\n", k->value->Model, diskSize);
+			uint64_t diskSize = (k->value->maxLBA * IDE_ATA_BYTESPERSECTOR);
+			debug("--Type:ATA, Model:'%s', Size:%g\n", k->value->Model, diskSize);
 		}
 		else
 		{
@@ -270,16 +331,17 @@ void HAL::init()
 	LinkedList<VMGR::Filesystem*>::Node* l = FILESYSTEMS.head;
 	while (l != NULL)
 	{
-		debug("--Name:%s, System ID:0x%x\n", l->value->Name, l->value->systemID);
+		debug("--Name:%s\n", l->value->Name);
 		l = l->nextNode;
 	}
 	
 	VMGR::mountAll();
 	debug("%i volume(s) mounted.\n", VOLUMES.length);
+
 	LinkedList<VMGR::Volume*>::Node* m = VOLUMES.head;
 	while (m != NULL)
 	{
-		debug("--Name:'%s', Online:%s, ID:%i\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID);
+		debug("--Name:'%s', Online:%s, ID:%i, Free Space: %g\n", m->value->Name, (m->value->Online ? "Yes":"No"), m->value->ID, m->value->getFreeSpace());
 		m = m->nextNode;
 	}
 

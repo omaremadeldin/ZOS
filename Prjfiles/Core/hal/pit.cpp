@@ -25,7 +25,7 @@ using namespace zos;
 assembly_stub void aihPIT(void);
 interrupt_handler void ihPIT(void)
 {	
-	systemTimer++;
+	HAL::systemTimer++;
 	
 	PIC::sendEOI(PIT_IRQ_NO);
 }
@@ -54,7 +54,7 @@ void PIT::sendData(uint8_t data, uint8_t counter)
 void PIT::init()
 {
 	//Reset the system timer
-	systemTimer = 0;
+	HAL::systemTimer = 0;
 	
 	//Install IRQ handler
 	IDT::installHandler((void*)&aihPIT, PIC::IRQ0 + PIT_IRQ_NO);

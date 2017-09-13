@@ -5,13 +5,17 @@
 //==========================================
 //Used Acronyms:
 //--------------
-//* IDT = Interrupt Descriptor Table
-//* PIC = Programmable Interrupt Controller
-//* PIT = Programmabel Interval Timer
-//* PMM = Physical Memory Manager
-//* VMM = Virtual Memory Manager
-//* PCI = Peripheral Component Interconnect
-//* IDE = Integrated Drive Electronics
+//* GDT  = Global Descriptor Table
+//* IDT  = Interrupt Descriptor Table
+//* PIC  = Programmable Interrupt Controller
+//* PIT  = Programmable Interval Timer
+//* RTC  = Real Time Clock
+//* PMM  = Physical Memory Manager
+//* VMM  = Virtual Memory Manager
+//* PCI  = Peripheral Component Interconnect
+//* IDE  = Integrated Drive Electronics
+//* PMGR = Partition Manager
+//* VMGR = Volume Manager
 //==========================================
 //By Omar Emad Eldin
 //==========================================
@@ -56,7 +60,8 @@ namespace zos
 	{
 	public:
 		static uint32_t memorySize;
-	
+		static uint32_t systemTimer;
+		
 	//I/O Functions	
 	public:
 		static uint8_t inportb(uint16_t port);
@@ -75,14 +80,30 @@ namespace zos
 		static void debugStr(const char* s);
 	public:
 		static void debug(const char* s, ...);
+		static uint32_t getUsedKernelHeap();
+		static uint32_t getFreeKernelHeap();
 		
+	public:
+		struct DateTime
+		{
+			uint16_t	Year;
+			uint8_t		Month;
+			uint8_t		Day;
+
+			uint8_t		Hours;
+			uint8_t		Minutes;
+			uint8_t		Seconds;
+		}__attribute__((packed));
+
 	//Miscellaneous Functions
 	public:
+		static uint32_t random(uint32_t max);
 		static void sleep(uint32_t ms);
+		static DateTime getCurrentDateTime(); 
 		static void inline enableInterrupts();
 		static void inline disableInterrupts();
 		static void halt();
-	
+
 	public:
 		//Initializes HAL and all its child devices
 		static void init();

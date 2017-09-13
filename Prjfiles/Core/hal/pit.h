@@ -34,9 +34,7 @@
 #define PIT_COUNTER_2	0x02
 
 namespace zos
-{
-	static uint32_t systemTimer;
-	
+{	
 	class PIT
 	{
 	private:
