@@ -23,7 +23,6 @@ Heap::Chunk* Heap::usedList = NULL;
 uint32_t Heap::usedListSize = 0;
 uint32_t Heap::usedListMaxSize = 0;
 uint32_t Heap::usedListPageCount = 0;
-Heap::Chunk* Heap::largestFreeChunk = NULL;
 
 void Heap::shiftFreeListRight(int32_t start)
 {
@@ -61,9 +60,6 @@ void Heap::removeFreeChunk(Heap::Chunk* chunk)
 	shiftFreeListLeft(pos);
 
 	freeListSize--;
-
-	if (largestFreeChunk == chunk)
-		largestFreeChunk = NULL;
 }
 
 void Heap::removeUsedChunk(Heap::Chunk* chunk)
@@ -84,6 +80,8 @@ Heap::Chunk* Heap::addFreeChunk(VirtualAddress address, uint32_t length)
 			return NULL;
 		}
 
+		memset((void*)(HEAP_FREELIST + (freeListPageCount * VMM_PAGE_SIZE)), 0, VMM_PAGE_SIZE);
+
 		freeListPageCount++;
 		freeListMaxSize = (freeListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
 	}
@@ -103,9 +101,6 @@ Heap::Chunk* Heap::addFreeChunk(VirtualAddress address, uint32_t length)
 
 	freeListSize++;
 
-	if ((largestFreeChunk == NULL) || (largestFreeChunk->Length < length))
-		largestFreeChunk = &freeList[pos];
-
 	return &freeList[pos];
 }
 
@@ -119,6 +114,8 @@ Heap::Chunk* Heap::addUsedChunk(VirtualAddress address, uint32_t length)
 			return NULL;
 		}
 
+		memset((void*)(HEAP_USEDLIST + (usedListPageCount * VMM_PAGE_SIZE)), 0, VMM_PAGE_SIZE);
+
 		usedListPageCount++;
 		usedListMaxSize = (usedListPageCount * VMM_PAGE_SIZE) / sizeof(Chunk);
 	}
@@ -127,7 +124,7 @@ Heap::Chunk* Heap::addUsedChunk(VirtualAddress address, uint32_t length)
 
 	while (!isChunkInvalid(chunk))	//Loop till we find an empty chunk
 		chunk++;
-	
+
 	chunk->Address = address;
 	chunk->Length = length;
 
@@ -183,29 +180,23 @@ void Heap::setRegionUsed(VirtualAddress address, uint32_t size)
 	Chunk* chunk = findFreeChunkContaining(from);
 
 	if ((chunk == NULL) || (chunk != findFreeChunkContaining(to)))
+	{
+		Exceptions::throwException("Heap Exception", "Heap::setRegionUsed()[1]: All or part of the region is already used.");
 		return;
-
-	uint32_t chunkFrom = chunk->Address;
-	uint32_t chunkTo = chunk->Address + chunk->Length;
-
+	}
+	
 	if ((chunk->Address == address) && (chunk->Length == size))
 	{
 		removeFreeChunk(chunk);
 	}
-	else if ((chunkFrom < from) && (chunkTo > to))
+	else if ((chunk->Address == address) && (chunk->Length > size))
 	{
-		removeFreeChunk(chunk);
-		addFreeChunk(chunkFrom, (from - chunkFrom));
-		addFreeChunk(to, (chunkTo - to));
+		chunk->Address += size;
+		chunk->Length -= size;
 	}
-	else if ((chunkFrom >= from) && (chunkTo > to))
+	else
 	{
-		chunk->Address = to;
-		chunk->Length = (chunkTo - to);
-	}
-	else if ((chunkFrom < from) && (chunkTo <= to))
-	{
-		chunk->Length = (from - chunkFrom);
+		Exceptions::throwException("Heap Exception", "Heap::setRegionUsed()[2]: Unknown region setting.");
 	}
 }
 
@@ -223,39 +214,24 @@ void Heap::setRegionUnused(VirtualAddress address, uint32_t size)
 	}
 	else if ((chunkFrom != NULL) && (chunkTo == NULL))
 	{
-		chunkFrom->Length = to - (chunkFrom->Address + chunkFrom->Length);
+		chunkFrom->Length += size;
 	}
 	else if ((chunkFrom == NULL) && (chunkTo != NULL))
 	{
 		chunkTo->Address = from;
-		chunkTo->Length = (chunkTo->Address + chunkTo->Length) - from;
+		chunkTo->Length += size;
 	}
 	else if ((chunkFrom != NULL) && (chunkTo != NULL) && (chunkFrom != chunkTo))
 	{
-		chunkFrom->Length = (to - (chunkFrom->Address + chunkFrom->Length)) + ((chunkTo->Address + chunkTo->Length) - from);
+		chunkFrom->Length += size + chunkTo->Length;
 		removeFreeChunk(chunkTo);
 	}
 }
 
 void* operator new(size_t objectSize)
-{	
+{
 	if (objectSize == 0)
 		return NULL;
-
-	if ((Heap::largestFreeChunk != NULL) && (Heap::largestFreeChunk->Length < objectSize))
-	{
-		uint32_t sizeNeeded = objectSize - Heap::largestFreeChunk->Length;
-		uint32_t pagesNeeded = sizeNeeded / VMM_PAGE_SIZE + ((sizeNeeded % VMM_PAGE_SIZE != 0) ? 1 : 0);
-
-		if (VMM::alloc(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE)) == NULL)
-		{
-			Exceptions::throwException("Heap Exception", "operator new(size_t)[1]: Cannot expand heap space");
-			return NULL;
-		}
-
-		Heap::setRegionUnused(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE));
-		Heap::pageCount += pagesNeeded;
-	}
 
 	Heap::Chunk* chunk = Heap::freeList;
 
@@ -277,8 +253,18 @@ void* operator new(size_t objectSize)
 		}
 	}
 
+	uint32_t pagesNeeded = ((objectSize + (VMM_PAGE_SIZE - 1)) / VMM_PAGE_SIZE);
 
-	return NULL;
+	if (VMM::alloc(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE)) == NULL)
+	{
+		Exceptions::throwException("Heap Exception", "operator new(size_t)[1]: Cannot expand heap space");
+		return NULL;
+	}
+
+	Heap::setRegionUnused(HEAP_BASEADDRESS + (Heap::pageCount * VMM_PAGE_SIZE), (pagesNeeded * VMM_PAGE_SIZE));
+	Heap::pageCount += pagesNeeded;
+
+	return operator new(objectSize);
 }
 
 void operator delete(void* p)
@@ -291,7 +277,10 @@ void operator delete(void* p)
 	Heap::Chunk* chunk = Heap::findUsedChunk(address);
 
 	if (chunk == NULL)
+	{
+		Exceptions::throwException("Heap Exception", "operator delete(void*)[1]: Deleting invalid address");
 		return;
+	}
 	
 	uint32_t length = chunk->Length;
 

@@ -20,6 +20,7 @@ namespace zos
 {
 	class Heap
 	{
+		friend class HAL;
 	private:
 		struct Chunk
 		{
@@ -37,7 +38,6 @@ namespace zos
 		static uint32_t usedListSize;
 		static uint32_t usedListMaxSize;
 		static uint32_t usedListPageCount;
-		static Chunk* largestFreeChunk;
 		
 	private:		
 		static void shiftFreeListRight(int32_t start);

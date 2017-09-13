@@ -19,6 +19,7 @@
 #include "pmm.h"
 
 #include "hal.h"
+#include "exceptions.h"
 
 #include <string.h>
 
@@ -160,29 +161,23 @@ void PMM::setRegionUsed(PhysicalAddress address, uint32_t size)
 	Chunk* chunk = findFreeChunkContaining(from);
 
 	if ((chunk == NULL) || (chunk != findFreeChunkContaining(to)))
+	{
+		Exceptions::throwException("PMM Exception", "PMM::setRegionUsed()[1]: All or part of the region is already used.");
 		return;
-
-	uint32_t chunkFrom = chunk->Address;
-	uint32_t chunkTo = chunk->Address + chunk->Length;
-
+	}
+	
 	if ((chunk->Address == address) && (chunk->Length == size))
 	{
 		removeFreeChunk(chunk);
 	}
-	else if ((chunkFrom < from) && (chunkTo > to))
+	else if ((chunk->Address == address) && (chunk->Length > size))
 	{
-		removeFreeChunk(chunk);
-		addFreeChunk(chunkFrom, (from - chunkFrom));
-		addFreeChunk(to, (chunkTo - to));
+		chunk->Address += size;
+		chunk->Length -= size;
 	}
-	else if ((chunkFrom >= from) && (chunkTo > to))
+	else
 	{
-		chunk->Address = to;
-		chunk->Length = (chunkTo - to);
-	}
-	else if ((chunkFrom < from) && (chunkTo <= to))
-	{
-		chunk->Length = (from - chunkFrom);
+		Exceptions::throwException("PMM Exception", "PMM::setRegionUsed()[2]: Unknown region setting.");
 	}
 }
 
@@ -200,16 +195,16 @@ void PMM::setRegionUnused(PhysicalAddress address, uint32_t size)
 	}
 	else if ((chunkFrom != NULL) && (chunkTo == NULL))
 	{
-		chunkFrom->Length = to - (chunkFrom->Address + chunkFrom->Length);
+		chunkFrom->Length += size;
 	}
 	else if ((chunkFrom == NULL) && (chunkTo != NULL))
 	{
 		chunkTo->Address = from;
-		chunkTo->Length = (chunkTo->Address + chunkTo->Length) - from;
+		chunkTo->Length += size;
 	}
 	else if ((chunkFrom != NULL) && (chunkTo != NULL) && (chunkFrom != chunkTo))
 	{
-		chunkFrom->Length = (to - (chunkFrom->Address + chunkFrom->Length)) + ((chunkTo->Address + chunkTo->Length) - from);
+		chunkFrom->Length += size + chunkTo->Length;
 		removeFreeChunk(chunkTo);
 	}
 }
@@ -248,7 +243,7 @@ PhysicalAddress PMM::alloc(size_t size)
 	if (size == 0)
 		return NULL;
 
-	uint32_t blocks = size / PMM_BLOCK_SIZE + ((size % PMM_BLOCK_SIZE != 0) ? 1 : 0);
+	uint32_t blocks = (size + (PMM_BLOCK_SIZE - 1)) / PMM_BLOCK_SIZE;
 	uint32_t realSize = blocks * PMM_BLOCK_SIZE;
 
 	Chunk* chunk = freeList;
@@ -292,7 +287,7 @@ void PMM::free(PhysicalAddress address)
 
 void PMM::init()
 {
-	blockCount = (HAL::memorySize / PMM_BLOCK_SIZE + ((HAL::memorySize % PMM_BLOCK_SIZE != 0) ? 1 : 0));
+	blockCount = (HAL::memorySize + (PMM_BLOCK_SIZE - 1)) / PMM_BLOCK_SIZE;
 
 	freeList = ((Chunk*)(KERNEL_VBASE + KERNEL_SIZE));		//The free chunk list will be located just after the kernel
 	freeListMaxSize = blockCount / 2;
