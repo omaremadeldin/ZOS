@@ -26,12 +26,15 @@ run-bochs: $(OUT)
 	echo "c" | bochs -q -f $(BXRC)
 
 run-qemu: $(OUT)
-	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M	
+	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -drive file=HDD1.img,index=0,media=disk,format=raw
 
 run-qemu-nogui: $(OUT)
-	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -curses
+	qemu-system-i386 -boot d -cdrom ZapperOS.iso -m 256M -drive file=HDD1.img,index=0,media=disk,format=raw	-curses
 
-debug: $(OUT)
+debug: debug-qemu
+debug-qemu: $(OUT)
+	qemu-system-i386 -gdb tcp::12345 -S -boot d -cdrom ZapperOS.iso -m 256M -drive file=HDD1.img,index=0,media=disk,format=raw
+
 debug-bochs: $(OUT)
 	bochs -q -f $(BXRC)
 

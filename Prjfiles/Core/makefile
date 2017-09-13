@@ -7,7 +7,7 @@
 #==========================================
 
 CC = i386-elf-g++
-CFLAGS = -c -std=c++0x -O0 -ffreestanding -nostdlib -Wall -Wextra -Werror -Wno-packed-bitfield-compat -fcheck-new -fno-omit-frame-pointer -masm=intel -fno-exceptions -fno-unwind-tables -fno-rtti -fno-common -ffriend-injection
+CFLAGS = -c -g -std=c++0x -O0 -ffreestanding -nostdlib -Wall -Wextra -Werror -Wno-packed-bitfield-compat -fcheck-new -fno-omit-frame-pointer -masm=intel -fno-exceptions -fno-unwind-tables -fno-rtti -fno-common -ffriend-injection
 INCLUDES = -Iinclude
 
 LD = i386-elf-ld
@@ -29,14 +29,16 @@ CPPOBJS = $(CPPSRCS:.cpp=.o)
 ASMSRCS = hal/aih.s hal/asms.s crtn.s crti.s crt0.s
 ASMOBJS = $(ASMSRCS:.s=.o)
 
+DBG = KRNL1.SYM
 OUT = KRNL1.SYS
 
 all:	$(ASMOBJS) $(CPPOBJS)
 	$(LD) $(LDFLAGS) crt0.o crti.o crtbegin.o hal/aih.o hal/asms.o $(CPPOBJS) ../ZLibC/zlibc.a crtend.o crtn.o -o $(OUT)
+	$(OBJCOPY) --only-keep-debug $(OUT) $(DBG)
 	$(OBJCOPY) -S -O binary $(OUT) $(OUT)
 	
-crt0.o:		crt0.s	
-crti.o:		crti.s	
+crt0.o:		crt0.s
+crti.o:		crti.s
 crtn.o:		crtn.s
 hal/asms.o:	hal/asms.s
 hal/aih.o:	hal/aih.s
@@ -76,4 +78,5 @@ $(CPPOBJS):
 clean:	
 	rm -r -f $(CPPOBJS)
 	rm -r -f $(ASMOBJS)
+	rm -r -f $(DBG)
 	rm -r -f $(OUT)
