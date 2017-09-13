@@ -149,7 +149,7 @@ void VMM::mapPages(PhysicalAddress pAddress, VirtualAddress vAddress, uint32_t n
 
 VirtualAddress VMM::alloc(VirtualAddress vAddress, size_t size)
 {
-	uint32_t pages = size / VMM_PAGE_SIZE + ((size % VMM_PAGE_SIZE != 0) ? 1 : 0);
+	uint32_t pages = (size + (VMM_PAGE_SIZE - 1)) / VMM_PAGE_SIZE;
 	PhysicalAddress p = PMM::alloc(pages * VMM_PAGE_SIZE);
 	
 	if (p == NULL)
@@ -179,7 +179,7 @@ void VMM::free(VirtualAddress vAddress)
 	if (chunk == NULL)
 		return;
 
-	uint32_t pageCount = chunk->Length / VMM_PAGE_SIZE + ((chunk->Length % VMM_PAGE_SIZE != 0) ? 1 : 0); 
+	uint32_t pageCount = (chunk->Length + (VMM_PAGE_SIZE - 1)) / VMM_PAGE_SIZE; 
 
 	PMM::free(pageTable[PTindex].getFrame());
 

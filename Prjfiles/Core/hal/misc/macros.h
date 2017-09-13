@@ -11,6 +11,11 @@
 #define assembly_stub 		extern "C"
 #define interrupt_handler 	extern "C"
 
+#define GET_BIT(x, y)		(x & (1 << y)) == (1 << y)
+
+#define SET_BIT(x, y)		(x | (1 << y))
+#define CLR_BIT(x, y)		(x & ~(1 << y))
+
 #define MAKE_DWORD(x,y)		((((uint32_t)y) << 16) | ((uint32_t)x))
 
 #define HIWORD(x) 			((x >> 16) & 0xFFFF)

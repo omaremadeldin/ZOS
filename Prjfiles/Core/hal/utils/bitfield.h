@@ -23,6 +23,11 @@ public:
 	{
 		return *((T*)this);
 	}
+
+	void clear()
+	{
+		*((T*)this) = 0;
+	}
 };
 
 // template <typename T>
