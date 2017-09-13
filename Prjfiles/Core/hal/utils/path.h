@@ -36,6 +36,8 @@ namespace zos
 		const char* toString();
 		char* getComponent(uint16_t index);	//This function returns a new string, should be disposed after usage
 		char* getNextComponent();	//This function returns a new string, should be disposed after usage
-		Path* getParentPath();	//This function returns a new string, should be disposed after usage
+		char* getFilename();	//This function returns a new string, should be disposed after usage
+		Path* getParentPath();	//This function returns a new path, should be disposed after usage
+		Path* addComponent(const char* filename);	//This function returns a new path, should be disposed after usage
 	};
 }

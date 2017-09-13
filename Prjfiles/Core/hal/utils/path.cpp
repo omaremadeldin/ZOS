@@ -45,7 +45,7 @@ bool Path::isValidPath(const char* strPath)
 {
 	if (strPath == NULL)
 		return false;
-
+	
 	size_t pathLen = strlen(strPath);
 
 	if (pathLen == 0)
@@ -118,6 +118,9 @@ const char* Path::toString()
 
 char* Path::getComponent(uint16_t index)
 {
+	if (length == 0)
+		return NULL;
+
 	uint16_t startpos = 0;
 	uint16_t endpos = 0;
 	uint16_t currentIndex = 0;
@@ -137,6 +140,9 @@ char* Path::getComponent(uint16_t index)
 		currentIndex++;
 	}
 
+	if (currentIndex >= length)
+		return NULL;
+
 	componentIndex = endpos;
 
 	char* result = new char[endpos - startpos + 1];
@@ -148,6 +154,9 @@ char* Path::getComponent(uint16_t index)
 
 char* Path::getNextComponent()
 {
+	if (length == 0)
+		return NULL;
+
 	uint16_t startpos = componentIndex;
 	uint16_t endpos = componentIndex;
 
@@ -173,10 +182,32 @@ char* Path::getNextComponent()
 	return result;
 }
 
+char* Path::getFilename()
+{
+	if (length == 0)
+		return NULL;
+
+	uint16_t startpos = length - 1;
+
+	while ((path[startpos] != '/') && (startpos != 0))
+		startpos--;
+
+	if (path[startpos] == '/')
+		startpos++;
+
+	char* result = new char[length - startpos + 1];
+	strncpy(result, path + startpos, length - startpos);
+	result[length - startpos] = '\0';
+
+	return result;
+}
+
 Path* Path::getParentPath()
 {
-	uint16_t newLength = length;
-	//  
+	if (length == 0)
+		return NULL;
+
+	int32_t newLength = length - 1;
 
 	while (path[newLength] == '/')
 		newLength--;
@@ -191,6 +222,42 @@ Path* Path::getParentPath()
 
 	char* strResult = new char[newLength + 1];
 	strncpy(strResult, path, newLength);
+	strResult[newLength] = '\0';
+
+	Path* result = new Path(strResult);
+	delete[] strResult;
+
+	return result;
+}
+
+Path* Path::addComponent(const char* filename)
+{
+	if (length == 0)
+		return NULL;
+
+	size_t ln = strlen(filename);
+
+	if (ln == 0)
+		return NULL;
+
+	size_t newLength = length + ln;
+
+	if (path[length - 1] != '/')
+		newLength++;
+
+	char* strResult = new char[newLength + 1];
+
+	strncpy(strResult, path, length);
+	if (path[length - 1] != '/')
+	{
+		strResult[length] = '/';
+		strncpy(&strResult[length + 1], filename, ln);
+	}
+	else
+	{
+		strncpy(&strResult[length], filename, ln);
+	}
+
 	strResult[newLength] = '\0';
 
 	Path* result = new Path(strResult);
