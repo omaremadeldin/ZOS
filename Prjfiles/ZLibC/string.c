@@ -63,7 +63,17 @@ int strcmp(const char* str1, const char* str2)
 	for ( ; *str1 == *str2; str1++, str2++)
 		if (*str1 == '\0')
 			return 0;
-    return ((*(unsigned char *)str1 < *(unsigned char *)str2) ? -1 : +1);
+	return ((*(unsigned char *)str1 < *(unsigned char *)str2) ? -1 : +1);
+}
+
+int strncmp(const char* str1, const char* str2, size_t num)
+{
+	for ( ; num > 0; str1++, str2++, --num)
+		if (*str1 != *str2)
+		    return ((*(unsigned char *)str1 < *(unsigned char *)str2) ? -1 : +1);
+		else if (*str1 == '\0')
+		    return 0;		
+    return 0;
 }
 
 //Searching
