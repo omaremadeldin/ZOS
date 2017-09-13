@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-char* itoa(int32_t i)
+const char* itoa(int32_t i, uint8_t padding)
 {
 	//Room for 19 digits, - and '\0'
 	static char buf[19 + 2];
@@ -25,6 +25,11 @@ char* itoa(int32_t i)
 			i /= 10;
 		}
 		while (i != 0);
+
+		int8_t len = strlen(p);
+
+		for (uint8_t i = 0; i < (padding - len); i++)
+			*--p = '0';
 		
 		return p;
 	}
@@ -35,13 +40,19 @@ char* itoa(int32_t i)
 			i /= 10;
 		}
 		while (i != 0);
+
+		int8_t len = strlen(p);
+
+		for (uint8_t i = 0; i < (padding - len); i++)
+			*--p = '0';
+
 		*--p = '-';
 	}
 	
 	return p;
 }
 
-char* xtoa(uint32_t i)
+const char* xtoa(uint32_t i, uint8_t padding)
 {
   	//Room for 19 digits and '\0'
   	static char buf[19 + 1];
@@ -52,6 +63,12 @@ char* xtoa(uint32_t i)
 	  *--p = (((i % 16) > 9) ? ('A' + (i % 16) - 10) : ('0' + (i % 16)));
 	  i /= 16;
 	} while (i != 0);
+
+	int8_t len = strlen(p);
+
+	for (uint8_t i = 0; i < (padding - len); i++)
+		*--p = '0';
+
 	return p;
 }
 
@@ -64,11 +81,19 @@ void formatWithArgs(const char* s, char* dst, va_list args)
 	
 	int length = strlen(s);
 	
-	for (int i=0; i<length; i++)
+	for (int i=0; i < length; i++)
 	{
 		if (s[i] == '%')
 		{
-			switch (s[i+1])
+			int k = 1;
+			if (isdigit(s[i + k]))
+				k++;
+
+			int padding = 0;
+			if (k > 1)
+				padding = s[i + k - 1] - '0';
+
+			switch (s[i+k])
 			{
 				case '%':
 				{
@@ -95,7 +120,7 @@ void formatWithArgs(const char* s, char* dst, va_list args)
 				case 'i':
 				{
 					uint32_t val = va_arg(args, int32_t);
-					char* str = itoa(val);
+					const char* str = itoa(val, padding);
 					
 					int ln = strlen(str);
 					for (int k=0; k<ln; k++)
@@ -106,7 +131,7 @@ void formatWithArgs(const char* s, char* dst, va_list args)
 				case 'x':
 				{
 					uint32_t val = va_arg(args, uint32_t);
-					char* str = xtoa(val);
+					const char* str = xtoa(val, padding);
 					
 					int ln = strlen(str);
 					for (int k=0; k<ln; k++)
@@ -114,13 +139,65 @@ void formatWithArgs(const char* s, char* dst, va_list args)
 					
 					break;
 				}
+				case 'g':
+				{
+					uint32_t val = va_arg(args, int32_t);
+
+					uint8_t count = 0;
+					while ((val >= 1024) && (count <= 4))
+					{
+						val /= 1024;
+						count++;
+					}
+
+					const char* str = itoa(val);
+					
+					int ln = strlen(str);
+					for (int k=0; k<ln; k++)
+						dst[j++] = str[k];
+
+					switch (count)
+					{
+						case 0:
+						{
+							dst[j++] = 'B';
+							break;
+						}
+						case 1:
+						{
+							dst[j++] = 'K';
+							dst[j++] = 'B';
+							break;
+						}
+						case 2:
+						{
+							dst[j++] = 'M';
+							dst[j++] = 'B';
+							break;
+						}
+						case 3:
+						{
+							dst[j++] = 'G';
+							dst[j++] = 'B';
+							break;
+						}
+						case 4:
+						{
+							dst[j++] = 'T';
+							dst[j++] = 'B';
+							break;
+						}
+					}
+					
+					break;
+				}
 				case 'b':
 				{
 					bool b = va_arg(args, bool);
-					char strT[] = "true";
-					char strF[] = "false";
+					const char strT[] = "true";
+					const char strF[] = "false";
 					
-					char* str = (b) ? strT : strF;
+					const char* str = (b) ? strT : strF;
 					
 					int ln = strlen(str);
 					for (int k=0; k<ln; k++)
@@ -134,7 +211,7 @@ void formatWithArgs(const char* s, char* dst, va_list args)
 				}
 			}
 			
-			i++;
+			i += k;
 		}
 		else
 		{

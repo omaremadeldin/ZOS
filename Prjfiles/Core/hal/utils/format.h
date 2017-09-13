@@ -10,9 +10,9 @@
 
 #include <stdlib.h>
 
-char* itoa(int32_t i);
+const char* itoa(int32_t i, uint8_t padding = 0);
 
-char* xtoa(uint32_t i);
+const char* xtoa(uint32_t i, uint8_t padding = 0);
 
 void formatWithArgs(const char* s, char* dst, va_list args);
 
