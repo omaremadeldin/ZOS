@@ -1,4 +1,4 @@
-# ZOS Environment Setup for Cygwin (Windows)
+# ZOS Environment Setup for Windows (Cygwin)
 
 *This has only been tried on Cygwin 32 on Windows 7 Ultimate 64-Bit, other versions of the system may need some tweaking or may not work.*
 
@@ -35,7 +35,7 @@ The toolchain versions used were:
     curl ftp://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2 | tar -jx -f - -C ~/src/
 	curl ftp://ftp.gnu.org/gnu/gmp/gmp-5.0.2.tar.bz2 | tar -jx -f - -C ~/src/gcc-6.2.0/
 	curl ftp://ftp.gnu.org/gnu/mpfr/mpfr-3.1.0.tar.bz2 | tar -jx -f - -C ~/src/gcc-6.2.0/
-	curl http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz | tar -zx -f - -C ~/src/gcc-6.2.0/
+	curl http://www.multiprecision.org/downloads/mpc-0.9.tar.gz | tar -zx -f - -C ~/src/gcc-6.2.0/
     cd ~/src/build-binutils/
     ../binutils-2.27/configure --prefix=$PREFIX --target=$TARGET --disable-multilib --disable-nls
     make all

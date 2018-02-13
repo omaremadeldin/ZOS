@@ -5,4 +5,4 @@ Please check the corresponding README file depending on the development platform
 
 * [Ubuntu](README.UBUNTU.md)
 * [Mac OS X](README.MACOSX.md)
-* [Cygwin (Windows)](README.CYGWIN.md)
+* Windows [Cygwin](README.CYGWIN.md) | [Windows 10 Linux Subsystem](README.WIN10-BASH.md)
